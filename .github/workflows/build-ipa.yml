@@ -1,0 +1,51 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.2'
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+        working-directory: DSRemote
+
+      - name: Build (unsigned - for sideloading with AltStore)
+        run: |
+          xcodebuild -project DSRemote.xcodeproj \
+            -scheme DSRemote \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+        working-directory: DSRemote
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/DSRemote.app Payload/
+          zip -r DSRemote.ipa Payload
+          rm -rf Payload
+        working-directory: DSRemote
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSRemote-IPA
+          path: DSRemote/DSRemote.ipa
