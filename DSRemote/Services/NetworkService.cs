@@ -21,6 +21,7 @@ public class NetworkService : IDisposable
 
     public bool IsConnected => _client?.Connected ?? false;
     public ConnectionInfo? CurrentConnection { get; private set; }
+    public string EmulatorName { get; set; } = "Citra";
 
     public NetworkService(int port = 9876)
     {
@@ -62,11 +63,12 @@ public class NetworkService : IDisposable
                 CurrentConnection = info;
                 DeviceConnected?.Invoke(info);
 
-                // Send welcome with connection type
+                // Send welcome with connection type and emulator name
                 var welcome = JsonSerializer.Serialize(new
                 {
                     action = "welcome",
-                    connection = connType == ConnectionType.USB ? "usb" : "wifi"
+                    connection = connType == ConnectionType.USB ? "usb" : "wifi",
+                    emulator = EmulatorName
                 });
                 _ = SendMessage(welcome);
 

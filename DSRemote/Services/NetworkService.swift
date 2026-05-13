@@ -14,6 +14,7 @@ class NetworkService: ObservableObject {
     @Published var games: [GameRom] = []
     @Published var discoveredHosts: [String] = []
     @Published var connectionType: ConnectionType = .wifi
+    @Published var emulatorName: String = "Citra"
 
     private var connection: NWConnection?
     private var host: NWEndpoint.Host = "127.0.0.1"
@@ -187,6 +188,7 @@ class NetworkService: ObservableObject {
                     onDisconnect?()
                 } else if action == "welcome", let connType = json["connection"] as? String {
                     connectionType = connType == "usb" ? .usb : .wifi
+                    if let emu = json["emulator"] as? String { emulatorName = emu }
                     connectionStatus = "Connected via \(connectionType.rawValue)"
                 }
             } else if let gamesData = json["games"] as? [[String: Any]] {

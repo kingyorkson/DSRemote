@@ -61,6 +61,15 @@ public class MainViewModel : INotifyPropertyChanged
     public string LocalIPAddress => GetLocalIP();
     public int Port => 9876;
 
+    private static string DetectEmulatorName(string emulatorPath)
+    {
+        var name = Path.GetFileNameWithoutExtension(emulatorPath)?.ToLowerInvariant() ?? "";
+        if (name.Contains("citra")) return "Citra";
+        if (name.Contains("desmume")) return "DeSmuME";
+        if (name.Contains("melon")) return "melonDS";
+        return name.Length > 0 ? char.ToUpper(name[0]) + name[1..] : "Citra";
+    }
+
     private static string GetLocalIP()
     {
         try
@@ -117,6 +126,7 @@ public class MainViewModel : INotifyPropertyChanged
         _input.SetCaptureService(_capture);
 
         AccentColor = (Color)ColorConverter.ConvertFromString(_config.Current.AccentColor);
+        _network.EmulatorName = DetectEmulatorName(_config.Current.EmulatorPath);
 
         IsSetupComplete = _config.Current.SetupComplete;
 

@@ -12,86 +12,161 @@ struct EmulatorView: View {
     @State private var showPowerAlert = false
 
     var body: some View {
-        VStack(spacing: 4) {
-            // Top bar
-            HStack {
-                Button(action: { showPowerAlert = true }) {
-                    Image(systemName: "power")
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding(6)
-                        .background(Color.red.opacity(0.15))
-                        .clipShape(Circle())
-                }
-                .alert("Quit Game?", isPresented: $showPowerAlert) {
-                    Button("Cancel", role: .cancel) {}
-                    Button("Quit", role: .destructive) {
-                        network.sendStopEmulation()
-                        onPowerOff()
-                    }
-                } message: {
-                    Text("This will stop the emulator and return to game selection.")
-                }
+        GeometryReader { geo in
+            let isLandscape = geo.size.width > geo.size.height
 
-                // Connection type badge
-                Text(network.connectionType.rawValue)
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .foregroundColor(network.connectionType == .usb ? settings.accentColor : .blue)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background((network.connectionType == .usb ? settings.accentColor : Color.blue).opacity(0.15))
-                    .cornerRadius(4)
-                    .padding(.leading, 4)
-
-                Spacer()
-                Text("DSRemote").font(.caption).foregroundColor(.gray)
-                Spacer()
-
-                Button(action: onDisconnect) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "power").font(.caption2)
-                        Text("Disconnect").font(.caption2)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(hex: "#e94560"))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+            VStack(spacing: 0) {
+                topBar
+                if isLandscape {
+                    landscapeBody(geo: geo)
+                } else {
+                    portraitBody(geo: geo)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 2)
+        }
+        .background(Color(hex: "#1a1a2e"))
+        .background(settings.accentColor.opacity(0.15))
+        .ignoresSafeArea(.keyboard)
+    }
 
-            // Top screen
+    // MARK: - Top Bar
+    private var topBar: some View {
+        HStack {
+            Button(action: { showPowerAlert = true }) {
+                Image(systemName: "power")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(6)
+                    .background(Color.red.opacity(0.15))
+                    .clipShape(Circle())
+            }
+            .alert("Quit Game?", isPresented: $showPowerAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Quit", role: .destructive) {
+                    network.sendStopEmulation()
+                    onPowerOff()
+                }
+            } message: {
+                Text("This will stop the emulator and return to game selection.")
+            }
+
+            Text(network.connectionType.rawValue)
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundColor(network.connectionType == .usb ? settings.accentColor : .blue)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background((network.connectionType == .usb ? settings.accentColor : Color.blue).opacity(0.15))
+                .cornerRadius(4)
+                .padding(.leading, 4)
+
+            Spacer()
+
+            Text(network.emulatorName)
+                .font(.caption)
+                .foregroundColor(.gray)
+
+            Spacer()
+
+            Button(action: onDisconnect) {
+                HStack(spacing: 3) {
+                    Image(systemName: "power").font(.caption2)
+                    Text("Disconnect").font(.caption2)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color(hex: "#e94560"))
+                .foregroundColor(.white)
+                .cornerRadius(8)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Portrait
+    private func portraitBody(geo: GeometryProxy) -> some View {
+        VStack(spacing: 4) {
             ScreenView(image: $topScreen, label: "Top")
-                .frame(height: UIScreen.main.bounds.height * 0.38)
+                .frame(height: geo.size.height * 0.42)
 
-            // Bottom screen with touch overlay
             ScreenView(image: $bottomScreen, label: "Bottom")
-                .frame(height: UIScreen.main.bounds.height * 0.26)
+                .frame(height: geo.size.height * 0.30)
                 .overlay(TouchSurfaceView(
                     onTouchDown: { pt in network.sendInput(.touchDown, args: [Float(pt.x), Float(pt.y)]) },
                     onTouchMove: { pt in network.sendInput(.touchMove, args: [Float(pt.x), Float(pt.y)]) },
                     onTouchUp: { network.sendInput(.touchUp, args: []) }
                 ))
 
-            // Button controls from active layout
-            GeometryReader { geo in
-                ZStack {
-                    ForEach(layoutService.activeLayout.buttons) { btn in
-                        controlButton(btn, containerSize: geo.size)
-                    }
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 4)
+            controlZone(containerSize: geo.size)
         }
-        .background(Color(hex: "#1a1a2e"))
-        .background(settings.accentColor.opacity(0.08))
-        .ignoresSafeArea(.keyboard)
     }
 
+    // MARK: - Landscape
+    private func landscapeBody(geo: GeometryProxy) -> some View {
+        HStack(spacing: 0) {
+            leftControls(containerSize: geo.size)
+                .frame(width: geo.size.width * 0.22)
+
+            VStack(spacing: 2) {
+                ScreenView(image: $topScreen, label: "Top")
+                    .frame(height: geo.size.height * 0.40)
+                ScreenView(image: $bottomScreen, label: "Bottom")
+                    .frame(height: geo.size.height * 0.28)
+                    .overlay(TouchSurfaceView(
+                        onTouchDown: { pt in network.sendInput(.touchDown, args: [Float(pt.x), Float(pt.y)]) },
+                        onTouchMove: { pt in network.sendInput(.touchMove, args: [Float(pt.x), Float(pt.y)]) },
+                        onTouchUp: { network.sendInput(.touchUp, args: []) }
+                    ))
+            }
+            .frame(width: geo.size.width * 0.56)
+
+            rightControls(containerSize: geo.size)
+                .frame(width: geo.size.width * 0.22)
+        }
+    }
+
+    // MARK: - Controls (Portrait)
+    private func controlZone(containerSize: CGSize) -> some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(layoutService.activeLayout.buttons) { btn in
+                    controlButton(btn, containerSize: geo.size)
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - Controls (Landscape)
+    private func leftControls(containerSize: CGSize) -> some View {
+        GeometryReader { geo in
+            let leftButtons = layoutService.activeLayout.buttons.filter {
+                $0.id == "dpad" || $0.id == "joystick" || $0.id == "l"
+            }
+            ZStack {
+                ForEach(leftButtons) { btn in
+                    controlButton(btn, containerSize: geo.size)
+                }
+            }
+        }
+    }
+
+    private func rightControls(containerSize: CGSize) -> some View {
+        GeometryReader { geo in
+            let rightButtons = layoutService.activeLayout.buttons.filter {
+                $0.id != "dpad" && $0.id != "joystick" && $0.id != "l"
+            }
+            ZStack {
+                ForEach(rightButtons) { btn in
+                    controlButton(btn, containerSize: geo.size)
+                }
+            }
+        }
+    }
+
+    // MARK: - Button Renderer
     private func controlButton(_ config: ButtonConfig, containerSize: CGSize) -> some View {
         let w = containerSize.width * config.relSize
         let h = containerSize.height * config.relSize
@@ -106,26 +181,26 @@ struct EmulatorView: View {
                 .frame(width: min(w, h), height: min(w, h))
             } else {
                 let btnId = buttonId(for: config.id)
-                Button(action: {}) {
-                    Text(config.label)
-                        .font(.system(size: max(10, config.relSize * 30)))
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .frame(width: min(w, h), height: min(w, h))
-                        .background(config.color.opacity(0.3))
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(config.color, lineWidth: 2))
-                }
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { _ in network.sendInput(.buttonDown, args: [Float(btnId)]) }
-                        .onEnded { _ in network.sendInput(.buttonUp, args: [Float(btnId)]) }
-                )
+                Text(config.label)
+                    .font(.system(size: max(10, config.relSize * 30)))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .frame(width: min(w, h), height: min(w, h))
+                    .background(config.color.opacity(0.3))
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(config.color, lineWidth: 2))
+                    .contentShape(Circle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in network.sendInput(.buttonDown, args: [Float(btnId)]) }
+                            .onEnded { _ in network.sendInput(.buttonUp, args: [Float(btnId)]) }
+                    )
             }
         }
         .position(x: config.relX * containerSize.width, y: config.relY * containerSize.height)
     }
 
+    // MARK: - D-Pad
     private func compactDPad(size: CGFloat) -> some View {
         VStack(spacing: 2) {
             CompactDPadBtn(direction: .up, label: "\u{25B2}", size: size * 0.3, action: { network.sendInput(.dPadPress, args: [0]) })
@@ -153,24 +228,7 @@ struct EmulatorView: View {
     }
 }
 
-struct CompactDPadBtn: View {
-    let direction: DPadDirection
-    let label: String
-    let size: CGFloat
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: size * 0.5))
-                .foregroundColor(.white)
-                .frame(width: size, height: size)
-                .background(Color(hex: "#333333"))
-                .cornerRadius(4)
-        }
-    }
-}
-
+// MARK: - Screen View with Upscaling
 struct ScreenView: View {
     @Binding var image: UIImage?
     let label: String
@@ -182,6 +240,7 @@ struct ScreenView: View {
                 Image(uiImage: img)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
+                    .interpolation(.high)
             } else {
                 VStack {
                     Image(systemName: "rectangle.split.2x1").font(.largeTitle).foregroundColor(.gray)
@@ -195,6 +254,7 @@ struct ScreenView: View {
     }
 }
 
+// MARK: - Touch Surface
 struct TouchSurfaceView: UIViewRepresentable {
     let onTouchDown: (CGPoint) -> Void
     let onTouchMove: (CGPoint) -> Void
@@ -249,6 +309,25 @@ struct TouchSurfaceView: UIViewRepresentable {
             let pt = normalizedLocation(in: view, from: gesture)
             onTouchDown(pt)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self.onTouchUp() }
+        }
+    }
+}
+
+// MARK: - Compact D-Pad Button
+struct CompactDPadBtn: View {
+    let direction: DPadDirection
+    let label: String
+    let size: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: size * 0.5))
+                .foregroundColor(.white)
+                .frame(width: size, height: size)
+                .background(Color(hex: "#333333"))
+                .cornerRadius(4)
         }
     }
 }
