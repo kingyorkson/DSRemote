@@ -3,6 +3,7 @@ import SwiftUI
 struct EmulatorView: View {
     @EnvironmentObject private var network: NetworkService
     @EnvironmentObject private var settings: AppSettings
+    @EnvironmentObject private var layoutService: LayoutService
     @Binding var topScreen: UIImage?
     @Binding var bottomScreen: UIImage?
     let onPowerOff: () -> Void
@@ -33,9 +34,7 @@ struct EmulatorView: View {
                 }
 
                 Spacer()
-
                 Text("DSRemote").font(.caption).foregroundColor(.gray)
-
                 Spacer()
 
                 Button(action: onDisconnect) {
@@ -53,11 +52,11 @@ struct EmulatorView: View {
             .padding(.horizontal, 8)
             .padding(.top, 2)
 
-            // Top screen (big)
+            // Top screen
             ScreenView(image: $topScreen, label: "Top")
                 .frame(height: UIScreen.main.bounds.height * 0.38)
 
-            // Bottom screen (medium)
+            // Bottom screen with touch overlay
             ScreenView(image: $bottomScreen, label: "Bottom")
                 .frame(height: UIScreen.main.bounds.height * 0.26)
                 .overlay(TouchSurfaceView(
@@ -66,68 +65,98 @@ struct EmulatorView: View {
                     onTouchUp: { network.sendInput(.touchUp, args: []) }
                 ))
 
-            // Compact 3DS controls
-            VStack(spacing: 6) {
-                // L / R
-                HStack(spacing: 30) {
-                    ShoulderLabel(label: "L", color: settings.accentColor, onPress: {
-                        network.sendInput(.buttonDown, args: [4])
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [4]) }
-                    })
-                    Spacer()
-                    ShoulderLabel(label: "R", color: settings.accentColor, onPress: {
-                        network.sendInput(.buttonDown, args: [5])
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [5]) }
-                    })
+            // Button controls from active layout
+            GeometryReader { geo in
+                ZStack {
+                    ForEach(layoutService.activeLayout.buttons) { btn in
+                        controlButton(btn, containerSize: geo.size)
+                    }
                 }
-                .padding(.horizontal, 20)
-
-                HStack(alignment: .center, spacing: 0) {
-                    DPadView { direction in
-                        network.sendInput(.dPadPress, args: [Float(direction.rawValue)])
-                    }
-                    .frame(maxWidth: .infinity)
-
-                    VStack(spacing: 4) {
-                        CircleButton(label: "Y", color: .yellow, onPress: { network.sendInput(.buttonDown, args: [3]) }, onRelease: { network.sendInput(.buttonUp, args: [3]) })
-                        HStack(spacing: 10) {
-                            CircleButton(label: "X", color: .blue, onPress: { network.sendInput(.buttonDown, args: [2]) }, onRelease: { network.sendInput(.buttonUp, args: [2]) })
-                            CircleButton(label: "B", color: .red, onPress: { network.sendInput(.buttonDown, args: [1]) }, onRelease: { network.sendInput(.buttonUp, args: [1]) })
-                        }
-                        CircleButton(label: "A", color: .green, onPress: { network.sendInput(.buttonDown, args: [0]) }, onRelease: { network.sendInput(.buttonUp, args: [0]) })
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .padding(.horizontal, 12)
-
-                HStack(alignment: .center, spacing: 0) {
-                    JoystickView { x, y in
-                        network.sendInput(.joystickMove, args: [x, y])
-                    }
-                    .frame(width: 60, height: 60)
-                    .frame(maxWidth: .infinity)
-
-                    HStack(spacing: 16) {
-                        Button("Select") {
-                            network.sendInput(.buttonDown, args: [7])
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [7]) }
-                        }
-                        .buttonStyle(ControlButtonStyle(color: settings.accentColor))
-
-                        Button("Start") {
-                            network.sendInput(.buttonDown, args: [6])
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [6]) }
-                        }
-                        .buttonStyle(ControlButtonStyle(color: settings.accentColor))
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .padding(.horizontal, 12)
             }
+            .padding(.horizontal, 8)
             .padding(.bottom, 4)
         }
         .background(Color(hex: "#1a1a2e"))
+        .background(settings.accentColor.opacity(0.08))
         .ignoresSafeArea(.keyboard)
+    }
+
+    private func controlButton(_ config: ButtonConfig, containerSize: CGSize) -> some View {
+        let w = containerSize.width * config.relSize
+        let h = containerSize.height * config.relSize
+
+        return Group {
+            if config.id == "dpad" {
+                compactDPad(size: min(w, h) * 0.8)
+            } else if config.id == "joystick" {
+                JoystickView { x, y in
+                    network.sendInput(.joystickMove, args: [x, y])
+                }
+                .frame(width: min(w, h), height: min(w, h))
+            } else {
+                let btnId = buttonId(for: config.id)
+                Button(action: {}) {
+                    Text(config.label)
+                        .font(.system(size: max(10, config.relSize * 30)))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .frame(width: min(w, h), height: min(w, h))
+                        .background(config.color.opacity(0.3))
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(config.color, lineWidth: 2))
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in network.sendInput(.buttonDown, args: [Float(btnId)]) }
+                        .onEnded { _ in network.sendInput(.buttonUp, args: [Float(btnId)]) }
+                )
+            }
+        }
+        .position(x: config.relX * containerSize.width, y: config.relY * containerSize.height)
+    }
+
+    private func compactDPad(size: CGFloat) -> some View {
+        VStack(spacing: 2) {
+            CompactDPadBtn(direction: .up, label: "\u{25B2}", size: size * 0.3, action: { network.sendInput(.dPadPress, args: [0]) })
+            HStack(spacing: 2) {
+                CompactDPadBtn(direction: .left, label: "\u{25C0}", size: size * 0.3, action: { network.sendInput(.dPadPress, args: [2]) })
+                Color.clear.frame(width: size * 0.3, height: size * 0.3)
+                CompactDPadBtn(direction: .right, label: "\u{25B6}", size: size * 0.3, action: { network.sendInput(.dPadPress, args: [3]) })
+            }
+            CompactDPadBtn(direction: .down, label: "\u{25BC}", size: size * 0.3, action: { network.sendInput(.dPadPress, args: [1]) })
+        }
+    }
+
+    private func buttonId(for id: String) -> Int {
+        switch id {
+        case "a": return 0
+        case "b": return 1
+        case "x": return 2
+        case "y": return 3
+        case "l": return 4
+        case "r": return 5
+        case "start": return 6
+        case "select": return 7
+        default: return 0
+        }
+    }
+}
+
+struct CompactDPadBtn: View {
+    let direction: DPadDirection
+    let label: String
+    let size: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: size * 0.5))
+                .foregroundColor(.white)
+                .frame(width: size, height: size)
+                .background(Color(hex: "#333333"))
+                .cornerRadius(4)
+        }
     }
 }
 
@@ -209,65 +238,6 @@ struct TouchSurfaceView: UIViewRepresentable {
             let pt = normalizedLocation(in: view, from: gesture)
             onTouchDown(pt)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self.onTouchUp() }
-        }
-    }
-}
-
-struct ControlButtonStyle: ButtonStyle {
-    let color: Color
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.caption2)
-            .fontWeight(.bold)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(configuration.isPressed ? color.opacity(0.8) : color.opacity(0.3))
-            .foregroundColor(.white)
-            .cornerRadius(6)
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(color, lineWidth: 1))
-    }
-}
-
-struct CircleButton: View {
-    let label: String
-    let color: Color
-    let onPress: () -> Void
-    let onRelease: () -> Void
-
-    var body: some View {
-        Button(action: {}) {
-            Text(label)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .frame(width: 40, height: 40)
-                .background(color.opacity(0.3))
-                .clipShape(Circle())
-                .overlay(Circle().stroke(color, lineWidth: 2))
-        }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in onPress() }
-                .onEnded { _ in onRelease() }
-        )
-    }
-}
-
-struct ShoulderLabel: View {
-    let label: String
-    let color: Color
-    let onPress: () -> Void
-
-    var body: some View {
-        Button(action: onPress) {
-            Text(label)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .frame(width: 50, height: 24)
-                .background(color.opacity(0.3))
-                .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(color, lineWidth: 1))
         }
     }
 }
