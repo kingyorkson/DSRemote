@@ -16,6 +16,7 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly GameLibraryService _library;
     private readonly NetworkService _network;
     private readonly ScreenCaptureService _capture;
+    private readonly DiscoveryService _discovery;
 
     public AppConfig Config => _config.Current;
 
@@ -54,6 +55,20 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => _phoneScreenImage;
         set { _phoneScreenImage = value; OnPropertyChanged(); }
+    }
+
+    public string LocalIPAddress => GetLocalIP();
+    public int Port => 9876;
+
+    private static string GetLocalIP()
+    {
+        try
+        {
+            var host = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+            var ip = host.AddressList.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+            return ip?.ToString() ?? "Unknown";
+        }
+        catch { return "Unknown"; }
     }
 
     private bool _isSlideMenuOpen;
@@ -96,6 +111,7 @@ public class MainViewModel : INotifyPropertyChanged
         _library = new GameLibraryService();
         _network = new NetworkService();
         _capture = new ScreenCaptureService();
+        _discovery = new DiscoveryService();
 
         AccentColor = (Color)ColorConverter.ConvertFromString(_config.Current.AccentColor);
 
@@ -105,6 +121,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             RefreshGames();
             _ = _network.StartServer();
+            _discovery.Start();
         }
 
         _network.DeviceConnected += OnDeviceConnected;
@@ -121,6 +138,7 @@ public class MainViewModel : INotifyPropertyChanged
         AccentColor = (Color)ColorConverter.ConvertFromString(config.AccentColor);
         RefreshGames();
         _ = _network.StartServer();
+        _discovery.Start();
     }
 
     public void RefreshGames()

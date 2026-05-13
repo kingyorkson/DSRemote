@@ -7,12 +7,15 @@ class NetworkService: ObservableObject {
     @Published var isConnected = false
     @Published var connectionStatus = "Disconnected"
     @Published var games: [GameRom] = []
+    @Published var discoveredHosts: [String] = []
 
     private var connection: NWConnection?
     private var host: NWEndpoint.Host = "127.0.0.1"
     private var port: NWEndpoint.Port = 9876
     private var onScreenshot: ((Data) -> Void)?
     private var onDisconnect: (() -> Void)?
+    
+    private var udpListener: NWListener?
 
     private var receivedBuffer = Data()
 
@@ -21,6 +24,32 @@ class NetworkService: ObservableObject {
         self.port = NWEndpoint.Port(rawValue: UInt16(port)) ?? 9876
         self.onScreenshot = onScreenshot
         self.onDisconnect = onDisconnect
+    }
+
+    func startDiscovery() {
+        guard let listener = try? NWListener(using: .udp, on: 9877) else { return }
+        udpListener = listener
+
+        listener.newConnectionHandler = { conn in
+            conn.receiveMessage { data, _, _, _ in
+                if let data = data,
+                   let msg = String(data: data, encoding: .utf8),
+                   msg.hasPrefix("DSREMOTE:") {
+                    let parts = msg.dropFirst(9).split(separator: ":")
+                    if parts.count >= 2 {
+                        let ip = String(parts[0])
+                        DispatchQueue.main.async {
+                            if !self.discoveredHosts.contains(ip) {
+                                self.discoveredHosts.append(ip)
+                            }
+                        }
+                    }
+                }
+                conn.cancel()
+            }
+            conn.start(queue: .main)
+        }
+        listener.start(queue: .main)
     }
 
     func connect() {

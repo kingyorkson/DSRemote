@@ -11,6 +11,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="36"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
 
         <!-- Custom Title Bar -->
@@ -196,8 +197,33 @@
             </Border>
         </Grid>
 
+        <!-- Bottom Bar: IP & Port -->
+        <Border Grid.Row="2" Background="#0d1117" Padding="12 0"
+                BorderThickness="0 1 0 0" BorderBrush="#333">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="IP: " FontSize="11" Foreground="#666"/>
+                    <TextBlock Text="{Binding LocalIPAddress}" FontSize="11" Foreground="#aaa"
+                               FontFamily="Consolas"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="Port: " FontSize="11" Foreground="#666"/>
+                    <TextBlock Text="{Binding Port}" FontSize="11" Foreground="#aaa"
+                               FontFamily="Consolas"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding StatusText}" FontSize="11"
+                           Foreground="#666" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
         <!-- Slide-out Menu -->
-        <Border x:Name="SlideMenu" Grid.RowSpan="2"
+        <Border x:Name="SlideMenu" Grid.RowSpan="3"
                 Width="220" HorizontalAlignment="Left"
                 Background="#0f3460" Margin="-220 0 0 0"
                 MouseEnter="SlideMenu_MouseEnter">

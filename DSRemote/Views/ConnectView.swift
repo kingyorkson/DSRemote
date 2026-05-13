@@ -9,25 +9,54 @@ struct ConnectView: View {
     let onConnected: () -> Void
 
     var body: some View {
-        VStack(spacing: 25) {
+        VStack(spacing: 20) {
             Spacer()
 
             ZStack {
                 Circle()
                     .fill(settings.accentColor.opacity(0.15))
-                    .frame(width: 120, height: 120)
+                    .frame(width: 100, height: 100)
                 Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.system(size: 50))
+                    .font(.system(size: 44))
                     .foregroundColor(settings.accentColor)
             }
 
             Text("DSRemote")
-                .font(.system(size: 36, weight: .bold))
+                .font(.system(size: 34, weight: .bold))
                 .foregroundColor(.white)
 
             Text(network.connectionStatus)
                 .font(.subheadline)
                 .foregroundColor(network.isConnected ? .green : .gray)
+
+            if !network.discoveredHosts.isEmpty {
+                VStack(spacing: 8) {
+                    Text("Discovered PCs:")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    ForEach(network.discoveredHosts, id: \.self) { ip in
+                        Button(action: {
+                            host = ip
+                            connect()
+                        }) {
+                            HStack {
+                                Image(systemName: "desktopcomputer")
+                                    .foregroundColor(settings.accentColor)
+                                Text(ip)
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text("Tap to connect")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding()
+                            .background(Color(hex: "#16213e"))
+                            .cornerRadius(10)
+                        }
+                    }
+                }
+                .padding(.horizontal, 30)
+            }
 
             VStack(spacing: 12) {
                 HStack {
@@ -37,6 +66,7 @@ struct ConnectView: View {
                         .textContentType(.URL)
                         .keyboardType(.decimalPad)
                         .foregroundColor(.white)
+                        .autocorrectionDisabled()
                 }
                 .padding()
                 .background(Color(hex: "#16213e"))
@@ -71,19 +101,20 @@ struct ConnectView: View {
                 Text("Customize Color")
                     .foregroundColor(.gray)
                     .underline()
+                    .font(.caption)
             }
 
             Spacer()
 
-            Text("Connect via WiFi\nMake sure PC and iPhone are on the same network")
+            Text("Make sure PC and iPhone are on the same network")
                 .font(.caption)
                 .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
                 .padding(.bottom, 30)
         }
         .onAppear {
             host = settings.lastHost
             port = String(settings.lastPort)
+            network.startDiscovery()
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()

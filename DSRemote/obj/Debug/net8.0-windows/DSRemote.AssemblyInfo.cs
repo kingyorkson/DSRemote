@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DSRemote")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+eb9686fdbe9db6184f27270cd014b1793d799e5a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+29ca6930b7dc27fdb60c04d531e8cd05f505a0fa")]
 [assembly: System.Reflection.AssemblyProductAttribute("DSRemote")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DSRemote")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

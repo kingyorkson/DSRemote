@@ -32,8 +32,27 @@ public partial class App : Application
         _trayIcon.ContextMenu.Items.Add(showMenuItem);
         _trayIcon.ContextMenu.Items.Add(exitMenuItem);
 
+        TryAddFirewallRule();
+
         _mainWindow = new MainWindow();
         _mainWindow.Show();
+    }
+
+    private static void TryAddFirewallRule()
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "netsh",
+                Arguments = $"advfirewall firewall add rule name=\"DSRemote\" dir=in action=allow protocol=TCP localport=9876 profile=any",
+                Verb = "runas",
+                UseShellExecute = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+            };
+            System.Diagnostics.Process.Start(psi);
+        }
+        catch { }
     }
 
     private static System.Drawing.Bitmap CreateAppIcon()
