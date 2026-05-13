@@ -1,3 +1,5 @@
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -24,6 +26,8 @@ public class ScreenCaptureService
 
     private const uint SRCCOPY = 0x00CC0020;
 
+    private readonly ScreenRegionDetector _detector = new();
+
     public byte[]? CaptureWindow(IntPtr hWnd)
     {
         if (hWnd == IntPtr.Zero) return null;
@@ -36,11 +40,11 @@ public class ScreenCaptureService
         var topLeft = new POINT { X = rect.Left, Y = rect.Top };
         ClientToScreen(hWnd, ref topLeft);
 
-        using var bitmap = new System.Drawing.Bitmap(width, height);
-        using var gDest = System.Drawing.Graphics.FromImage(bitmap);
+        using var bitmap = new Bitmap(width, height);
+        using var gDest = Graphics.FromImage(bitmap);
         var hdcDest = gDest.GetHdc();
 
-        using var gSrc = System.Drawing.Graphics.FromHwnd(IntPtr.Zero);
+        using var gSrc = Graphics.FromHwnd(IntPtr.Zero);
         var hdcSrc = gSrc.GetHdc();
 
         BitBlt(hdcDest, 0, 0, width, height, hdcSrc, topLeft.X, topLeft.Y, SRCCOPY);
@@ -49,7 +53,7 @@ public class ScreenCaptureService
         gDest.ReleaseHdc(hdcDest);
 
         using var ms = new MemoryStream();
-        bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
+        bitmap.Save(ms, ImageFormat.Jpeg);
         return ms.ToArray();
     }
 
@@ -58,5 +62,46 @@ public class ScreenCaptureService
         var bytes = CaptureWindow(hWnd);
         if (bytes == null) return string.Empty;
         return "IMAGE:" + Convert.ToBase64String(bytes);
+    }
+
+    public (string Top, string Bottom) CaptureScreensAsBase64(IntPtr hWnd)
+    {
+        if (hWnd == IntPtr.Zero) return (string.Empty, string.Empty);
+
+        if (!GetClientRect(hWnd, out var rect)) return (string.Empty, string.Empty);
+        var width = rect.Right - rect.Left;
+        var height = rect.Bottom - rect.Top;
+        if (width <= 0 || height <= 0) return (string.Empty, string.Empty);
+
+        var topLeft = new POINT { X = rect.Left, Y = rect.Top };
+        ClientToScreen(hWnd, ref topLeft);
+
+        using var fullBitmap = new Bitmap(width, height);
+        using (var gDest = Graphics.FromImage(fullBitmap))
+        {
+            var hdcDest = gDest.GetHdc();
+            using var gSrc = Graphics.FromHwnd(IntPtr.Zero);
+            var hdcSrc = gSrc.GetHdc();
+            BitBlt(hdcDest, 0, 0, width, height, hdcSrc, topLeft.X, topLeft.Y, SRCCOPY);
+            gSrc.ReleaseHdc(hdcSrc);
+            gDest.ReleaseHdc(hdcDest);
+        }
+
+        var (topRect, bottomRect) = _detector.Detect(fullBitmap);
+
+        string EncodeRegion(Bitmap source, Rectangle region)
+        {
+            region.Intersect(new Rectangle(0, 0, source.Width, source.Height));
+            if (region.Width <= 0 || region.Height <= 0) return string.Empty;
+            using var cropped = source.Clone(region, PixelFormat.Format24bppRgb);
+            using var ms = new MemoryStream();
+            cropped.Save(ms, ImageFormat.Jpeg);
+            return Convert.ToBase64String(ms.ToArray());
+        }
+
+        var topB64 = EncodeRegion(fullBitmap, topRect);
+        var bottomB64 = EncodeRegion(fullBitmap, bottomRect);
+
+        return ("TOP_IMAGE:" + topB64, "BOTTOM_IMAGE:" + bottomB64);
     }
 }

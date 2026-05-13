@@ -26,6 +26,9 @@ class NetworkService: ObservableObject {
         self.onDisconnect = onDisconnect
     }
 
+    var onTopScreenshot: ((Data) -> Void)?
+    var onBottomScreenshot: ((Data) -> Void)?
+
     func startDiscovery() {
         guard let listener = try? NWListener(using: .udp, on: 9877) else { return }
         udpListener = listener
@@ -121,24 +124,30 @@ class NetworkService: ObservableObject {
     private func processData(_ data: Data) {
         receivedBuffer.append(data)
 
-        let imgMarker = "IMAGE:".data(using: .utf8)!
-        while true {
-            guard receivedBuffer.count >= imgMarker.count,
-                  receivedBuffer[..<imgMarker.count] == imgMarker else {
-                break
-            }
+        let markers: [(Data, (Data) -> Void)] = [
+            ("BOTTOM_IMAGE:".data(using: .utf8)!, { [weak self] in self?.onBottomScreenshot?($0) ?? self?.onScreenshot?($0) }),
+            ("TOP_IMAGE:".data(using: .utf8)!, { [weak self] in self?.onTopScreenshot?($0) ?? self?.onScreenshot?($0) }),
+            ("IMAGE:".data(using: .utf8)!, { [weak self] in self?.onScreenshot?($0) }),
+        ]
 
-            let rest = receivedBuffer[imgMarker.count...]
-            if let endIndex = rest.firstIndex(of: UInt8(ascii: "\n")) ?? rest.firstIndex(of: UInt8(ascii: "\0")) {
-                let base64Data = rest[..<endIndex]
-                if let base64Str = String(data: base64Data, encoding: .utf8),
-                   let imgData = Data(base64Encoded: base64Str) {
-                    onScreenshot?(imgData)
+        while true {
+            var matched = false
+            for (marker, handler) in markers {
+                guard receivedBuffer.count >= marker.count,
+                      receivedBuffer[..<marker.count] == marker else { continue }
+                let rest = receivedBuffer[marker.count...]
+                if let endIndex = rest.firstIndex(of: UInt8(ascii: "\n")) ?? rest.firstIndex(of: UInt8(ascii: "\0")) {
+                    let base64Data = rest[..<endIndex]
+                    if let base64Str = String(data: base64Data, encoding: .utf8),
+                       let imgData = Data(base64Encoded: base64Str) {
+                        handler(imgData)
+                    }
+                    receivedBuffer = Data(rest[rest.index(after: endIndex)...])
+                    matched = true
+                    break
                 }
-                receivedBuffer = Data(rest[rest.index(after: endIndex)...])
-                continue
             }
-            break
+            if !matched { break }
         }
 
         while true {
@@ -191,6 +200,12 @@ class NetworkService: ObservableObject {
 
     func sendDisconnect() {
         let msg = ["action": "disconnect"]
+        guard let data = try? JSONSerialization.data(withJSONObject: msg) else { return }
+        send(data)
+    }
+
+    func sendStopEmulation() {
+        let msg = ["action": "stop"]
         guard let data = try? JSONSerialization.data(withJSONObject: msg) else { return }
         send(data)
     }

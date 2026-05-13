@@ -22,15 +22,15 @@ struct EmulatorView: View {
                         .background(Color.red.opacity(0.15))
                         .clipShape(Circle())
                 }
-                .alert("Quit Game?", isPresented: $showPowerAlert) {
-                    Button("Cancel", role: .cancel) {}
-                    Button("Quit", role: .destructive) {
-                        network.sendInput(.buttonDown, args: [99])
-                        onPowerOff()
+                    .alert("Quit Game?", isPresented: $showPowerAlert) {
+                        Button("Cancel", role: .cancel) {}
+                        Button("Quit", role: .destructive) {
+                            network.sendStopEmulation()
+                            onPowerOff()
+                        }
+                    } message: {
+                        Text("This will stop the emulator and return to game selection.")
                     }
-                } message: {
-                    Text("This will save and return to game selection.")
-                }
 
                 Spacer()
 

@@ -50,7 +50,13 @@ struct ContentView: View {
                 port: settings.lastPort,
                 onScreenshot: { data in
                     DispatchQueue.main.async {
-                        processScreenshot(data)
+                        if let image = UIImage(data: data) {
+                            if topScreenImage == nil {
+                                topScreenImage = image
+                            } else {
+                                bottomScreenImage = image
+                            }
+                        }
                     }
                 },
                 onDisconnect: {
@@ -60,15 +66,19 @@ struct ContentView: View {
                     }
                 }
             )
-        }
-    }
-
-    private func processScreenshot(_ data: Data) {
-        if let image = UIImage(data: data) {
-            if topScreenImage == nil {
-                topScreenImage = image
-            } else {
-                bottomScreenImage = image
+            network.onTopScreenshot = { data in
+                DispatchQueue.main.async {
+                    if let image = UIImage(data: data) {
+                        topScreenImage = image
+                    }
+                }
+            }
+            network.onBottomScreenshot = { data in
+                DispatchQueue.main.async {
+                    if let image = UIImage(data: data) {
+                        bottomScreenImage = image
+                    }
+                }
             }
         }
     }

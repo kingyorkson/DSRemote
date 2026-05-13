@@ -17,6 +17,7 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly NetworkService _network;
     private readonly ScreenCaptureService _capture;
     private readonly DiscoveryService _discovery;
+    private readonly InputMapper _input = new();
 
     public AppConfig Config => _config.Current;
 
@@ -182,9 +183,11 @@ public class MainViewModel : INotifyPropertyChanged
     public async Task SendScreenshot(IntPtr emulatorHwnd)
     {
         if (!_network.IsConnected) return;
-        var b64 = _capture.CaptureWindowAsBase64(emulatorHwnd);
-        if (!string.IsNullOrEmpty(b64))
-            await _network.SendMessage(b64);
+        var (top, bottom) = _capture.CaptureScreensAsBase64(emulatorHwnd);
+        if (!string.IsNullOrEmpty(top))
+            await _network.SendMessage(top);
+        if (!string.IsNullOrEmpty(bottom))
+            await _network.SendMessage(bottom);
     }
 
     private async void OnDeviceConnected(ConnectionInfo info)
@@ -215,6 +218,40 @@ public class MainViewModel : INotifyPropertyChanged
         {
             using var doc = System.Text.Json.JsonDocument.Parse(json);
             var root = doc.RootElement;
+
+            // Input messages use "type" field
+            if (root.TryGetProperty("type", out var typeProp))
+            {
+                var type = typeProp.GetString();
+                var hWnd = _emulator.GetEmulatorWindowHandle();
+                if (hWnd == null || hWnd.Value == IntPtr.Zero) return;
+
+                var args = new List<float>();
+                if (root.TryGetProperty("args", out var argsProp))
+                {
+                    foreach (var item in argsProp.EnumerateArray())
+                        args.Add(item.GetSingle());
+                }
+
+                switch (type)
+                {
+                    case "ButtonDown":
+                        if (args.Count > 0) _input.SendButtonDown(hWnd.Value, (int)args[0]);
+                        break;
+                    case "ButtonUp":
+                        if (args.Count > 0) _input.SendButtonUp(hWnd.Value, (int)args[0]);
+                        break;
+                    case "DPadPress":
+                        if (args.Count > 0) _input.SendDPad(hWnd.Value, (int)args[0]);
+                        break;
+                    case "JoystickMove":
+                        if (args.Count >= 2) _input.SendJoystickMove(hWnd.Value, args[0], args[1]);
+                        break;
+                }
+                return;
+            }
+
+            // Action messages use "action" field
             var action = root.TryGetProperty("action", out var actionProp) ? actionProp.GetString() : null;
             switch (action)
             {
@@ -234,8 +271,21 @@ public class MainViewModel : INotifyPropertyChanged
                         var path = pathProp.GetString();
                         var game = Games.FirstOrDefault(g => g.FullPath == path);
                         if (game != null)
-                            _ = LaunchGame(game);
+                        {
+                            App.Current.Dispatcher.Invoke(() =>
+                            {
+                                StatusText = "Launching emulator...";
+                            });
+                            _ = _emulator.LaunchGame(_config.Current, game);
+                            App.Current.Dispatcher.Invoke(() =>
+                            {
+                                StatusText = $"Streaming to {DeviceName}";
+                            });
+                        }
                     }
+                    break;
+                case "stop":
+                    App.Current.Dispatcher.Invoke(StopEmulation);
                     break;
             }
         }
