@@ -61,15 +61,6 @@ public class MainViewModel : INotifyPropertyChanged
     public string LocalIPAddress => GetLocalIP();
     public int Port => 9876;
 
-    private static string DetectEmulatorName(string emulatorPath)
-    {
-        var name = Path.GetFileNameWithoutExtension(emulatorPath)?.ToLowerInvariant() ?? "";
-        if (name.Contains("citra")) return "Citra";
-        if (name.Contains("desmume")) return "DeSmuME";
-        if (name.Contains("melon")) return "melonDS";
-        return name.Length > 0 ? char.ToUpper(name[0]) + name[1..] : "Citra";
-    }
-
     private static string GetLocalIP()
     {
         try
@@ -150,7 +141,8 @@ public class MainViewModel : INotifyPropertyChanged
         _input.LoadConfig(config);
         IsSetupComplete = true;
         AccentColor = (Color)ColorConverter.ConvertFromString(config.AccentColor);
-        RefreshGames();
+        _network.EmulatorName = DetectEmulatorName(config.EmulatorPath);
+        _ = Task.Run(RefreshGames);
         _ = _network.StartServer();
         _discovery.Start();
     }
@@ -159,8 +151,11 @@ public class MainViewModel : INotifyPropertyChanged
     {
         Games.Clear();
         var found = _library.ScanFolders(_config.Current.GameFolders);
-        foreach (var game in found)
-            Games.Add(game);
+        await App.Current.Dispatcher.InvokeAsync(() =>
+        {
+            foreach (var game in found)
+                Games.Add(game);
+        });
         if (_network.IsConnected)
             await _network.SendGameList(Games.ToList());
     }
@@ -341,6 +336,15 @@ public class MainViewModel : INotifyPropertyChanged
                 _ => StatusText
             };
         });
+    }
+
+    private static string DetectEmulatorName(string emulatorPath)
+    {
+        var name = Path.GetFileNameWithoutExtension(emulatorPath)?.ToLowerInvariant() ?? "";
+        if (name.Contains("citra")) return "Citra";
+        if (name.Contains("desmume")) return "DeSmuME";
+        if (name.Contains("melon")) return "melonDS";
+        return name.Length > 0 ? char.ToUpper(name[0]) + name[1..] : "Citra";
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

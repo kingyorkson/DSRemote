@@ -169,8 +169,9 @@ struct EmulatorView: View {
 
     // MARK: - Button Renderer
     private func controlButton(_ config: ButtonConfig, containerSize: CGSize) -> some View {
-        let w = containerSize.width * config.relSize
-        let h = containerSize.height * config.relSize
+        let sizeMultiplier: CGFloat = 1.4
+        let w = containerSize.width * config.relSize * sizeMultiplier
+        let h = containerSize.height * config.relSize * sizeMultiplier
 
         return Group {
             if config.id == "dpad" {
@@ -183,19 +184,21 @@ struct EmulatorView: View {
             } else {
                 let btnId = buttonId(for: config.id)
                 Text(config.label)
-                    .font(.system(size: max(10, config.relSize * 30)))
+                    .font(.system(size: max(10, config.relSize * 30 * sizeMultiplier)))
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .frame(width: min(w, h), height: min(w, h))
-                    .background(config.color.opacity(0.3))
+                    .background(config.color.opacity(0.4))
                     .clipShape(Circle())
-                    .overlay(Circle().stroke(config.color, lineWidth: 2))
+                    .overlay(Circle().stroke(config.color, lineWidth: 3))
                     .contentShape(Circle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { _ in network.sendInput(.buttonDown, args: [Float(btnId)]) }
-                            .onEnded { _ in network.sendInput(.buttonUp, args: [Float(btnId)]) }
-                    )
+                    .onLongPressGesture(minimumDuration: 0, pressing: { isPressing in
+                        if isPressing {
+                            network.sendInput(.buttonDown, args: [Float(btnId)])
+                        } else {
+                            network.sendInput(.buttonUp, args: [Float(btnId)])
+                        }
+                    }, perform: {})
             }
         }
         .position(x: config.relX * containerSize.width, y: config.relY * containerSize.height)
