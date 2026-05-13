@@ -5,12 +5,32 @@ namespace DSRemote.Models;
 
 public class AppConfig
 {
-    public string EmulatorPath { get; set; } = string.Empty;
     public EmulatorType EmulatorType { get; set; } = EmulatorType.DS;
     public List<string> GameFolders { get; set; } = new();
     public string AccentColor { get; set; } = "#32CD32";
     public string LastConnectedDevice { get; set; } = string.Empty;
     public bool SetupComplete { get; set; }
+
+    public string EmulatorPath
+    {
+        get
+        {
+            var dir = EmulatorType switch
+            {
+                EmulatorType.DS => Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "DSRemote", "emulators", "melonDS"),
+                EmulatorType.ThreeDS => Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "DSRemote", "emulators", "lime3ds"),
+                _ => ""
+            };
+            if (!Directory.Exists(dir)) return "";
+            var exe = Directory.GetFiles(dir, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
+            return exe ?? "";
+        }
+    }
+
     public Dictionary<int, int> ButtonMappings { get; set; } = new()
     {
         [0] = (int)'Z',      // A

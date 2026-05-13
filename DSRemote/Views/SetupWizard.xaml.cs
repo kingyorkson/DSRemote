@@ -1,8 +1,10 @@
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using DSRemote.Models;
+using DSRemote.Services;
 
 namespace DSRemote.Views;
 
@@ -12,7 +14,6 @@ public partial class SetupWizard : Window
     private readonly AppConfig _config = new();
     private static readonly string[] StepTitles =
     {
-        "Select Emulator",
         "Choose Platform",
         "Select Game Folders",
         "Choose Accent Color",
@@ -41,12 +42,11 @@ public partial class SetupWizard : Window
 
     private Page GetStepPage(int step) => step switch
     {
-        0 => new EmulatorSelectPage(),
-        1 => new PlatformSelectPage(),
-        2 => new GameFolderPage(this),
-        3 => new ColorPickerPage(),
-        4 => new SummaryPage(),
-        _ => new EmulatorSelectPage()
+        0 => new PlatformDownloadPage(this),
+        1 => new GameFolderPage(this),
+        2 => new ColorPickerPage(),
+        3 => new SummaryPage(),
+        _ => new PlatformDownloadPage(this)
     };
 
     private void Back_Click(object sender, RoutedEventArgs e)
@@ -82,240 +82,152 @@ public interface ISetupPage
     bool Validate(AppConfig config);
 }
 
-public class EmulatorSelectPage : Page, ISetupPage
+public class PlatformDownloadPage : Page, ISetupPage
 {
-    private readonly TextBox _pathBox = new()
-    {
-        IsEnabled = false, Padding = new Thickness(10), FontSize = 14,
-        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16213e")),
-        Foreground = Brushes.White, BorderThickness = new Thickness(1),
-        BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0f3460"))
-    };
-
-    private readonly RadioButton _melonDS = new()
-    {
-        Content = "melonDS (Recommended)", FontSize = 15, Foreground = Brushes.White,
-        Margin = new Thickness(0, 5, 0, 5), GroupName = "Emulator", IsChecked = true,
-        Tag = "melonDS.exe"
-    };
-
-    private readonly RadioButton _desmume = new()
-    {
-        Content = "DeSmuME", FontSize = 15, Foreground = Brushes.White,
-        Margin = new Thickness(0, 5, 0, 5), GroupName = "Emulator", Tag = "DeSmuME.exe"
-    };
-
-    private readonly RadioButton _citra = new()
-    {
-        Content = "Citra / Lime3DS", FontSize = 15, Foreground = Brushes.White,
-        Margin = new Thickness(0, 5, 0, 5), GroupName = "Emulator", Tag = "citra-qt.exe"
-    };
-
-    private readonly RadioButton _custom = new()
-    {
-        Content = "Custom...", FontSize = 15, Foreground = Brushes.White,
-        Margin = new Thickness(0, 5, 0, 5), GroupName = "Emulator", Tag = null
-    };
-
-    public EmulatorSelectPage()
-    {
-        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1a1a2e"));
-
-        _custom.Checked += (_, _) => _pathBox.IsEnabled = true;
-        _melonDS.Checked += (_, _) => _pathBox.IsEnabled = false;
-        _desmume.Checked += (_, _) => _pathBox.IsEnabled = false;
-        _citra.Checked += (_, _) => _pathBox.IsEnabled = false;
-
-        var stack = new StackPanel { Margin = new Thickness(30) };
-        stack.Children.Add(new TextBlock
-        {
-            Text = "Select your emulator executable:", FontSize = 16,
-            Foreground = Brushes.White, Margin = new Thickness(0, 0, 0, 20)
-        });
-
-        stack.Children.Add(_melonDS);
-        stack.Children.Add(_desmume);
-        stack.Children.Add(_citra);
-        stack.Children.Add(_custom);
-
-        var browseBtn = new Button
-        {
-            Content = "Browse...", Padding = new Thickness(15, 10, 15, 10), Margin = new Thickness(0, 10, 0, 0),
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0f3460")),
-            Foreground = Brushes.White, BorderThickness = new Thickness(0)
-        };
-        browseBtn.Click += Browse_Click;
-        stack.Children.Add(browseBtn);
-        stack.Children.Add(_pathBox);
-
-        Content = stack;
-    }
-
-    private void Browse_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Filter = "Executable files (*.exe)|*.exe|All files (*.*)|*.*",
-            Title = "Select Emulator Executable"
-        };
-        if (dlg.ShowDialog() == true)
-        {
-            _pathBox.Text = dlg.FileName;
-            _custom.IsChecked = true;
-        }
-    }
-
-    public bool Validate(AppConfig config)
-    {
-        if (_melonDS.IsChecked == true)
-        {
-            config.EmulatorPath = FindEmulator("melonDS.exe");
-            ApplyDefaults(config, "melonDS");
-        }
-        else if (_desmume.IsChecked == true)
-        {
-            config.EmulatorPath = FindEmulator("DeSmuME.exe");
-            ApplyDefaults(config, "desmume");
-        }
-        else if (_citra.IsChecked == true)
-        {
-            config.EmulatorPath = FindEmulator("citra-qt.exe");
-            ApplyDefaults(config, "citra");
-        }
-        else if (_custom.IsChecked == true)
-        {
-            config.EmulatorPath = _pathBox.Text;
-        }
-
-        if (string.IsNullOrEmpty(config.EmulatorPath) || !File.Exists(config.EmulatorPath))
-        {
-            MessageBox.Show("Please select a valid emulator executable.", "Validation Error",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-            return false;
-        }
-        return true;
-    }
-
-    private static void ApplyDefaults(AppConfig config, string emulator)
-    {
-        if (emulator == "citra")
-        {
-            // Citra / Lime3DS defaults
-            config.ButtonMappings = new()
-            {
-                [0] = (int)'Z',      // A
-                [1] = (int)'X',      // B
-                [2] = (int)'S',      // X
-                [3] = (int)'A',      // Y
-                [4] = (int)'Q',      // L
-                [5] = (int)'W',      // R
-                [6] = 0x0D,          // Start -> Enter
-                [7] = 0x08,          // Select -> Backspace
-            };
-            config.DPadMappings = new()
-            {
-                [0] = 0x26,  // Up
-                [1] = 0x28,  // Down
-                [2] = 0x25,  // Left
-                [3] = 0x27,  // Right
-            };
-        }
-        else if (emulator == "desmume")
-        {
-            // DeSmuME defaults
-            config.ButtonMappings = new()
-            {
-                [0] = (int)'X',      // A
-                [1] = (int)'Z',      // B
-                [2] = (int)'S',      // X
-                [3] = (int)'A',      // Y
-                [4] = (int)'Q',      // L
-                [5] = (int)'W',      // R
-                [6] = 0x0D,          // Start -> Enter
-                [7] = 0x08,          // Select -> Backspace
-            };
-            config.DPadMappings = new()
-            {
-                [0] = 0x26, [1] = 0x28, [2] = 0x25, [3] = 0x27,
-            };
-        }
-        else  // melonDS
-        {
-            // MelonDS defaults
-            config.ButtonMappings = new()
-            {
-                [0] = (int)'Z',      // A
-                [1] = (int)'X',      // B
-                [2] = (int)'S',      // X
-                [3] = (int)'A',      // Y
-                [4] = (int)'Q',      // L
-                [5] = (int)'W',      // R
-                [6] = 0x0D,          // Start -> Enter
-                [7] = 0x08,          // Select -> Backspace
-            };
-            config.DPadMappings = new()
-            {
-                [0] = 0x26, [1] = 0x28, [2] = 0x25, [3] = 0x27,
-            };
-        }
-    }
-
-    private static string FindEmulator(string exeName)
-    {
-        var commonPaths = new[]
-        {
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-        };
-
-        foreach (var basePath in commonPaths)
-        {
-            try
-            {
-                var file = Directory.EnumerateFiles(basePath, exeName, SearchOption.AllDirectories)
-                    .FirstOrDefault();
-                if (file != null) return file;
-            }
-            catch { }
-        }
-        return exeName;
-    }
-}
-
-public class PlatformSelectPage : Page, ISetupPage
-{
+    private readonly SetupWizard _wizard;
     private readonly RadioButton _ds = new()
     {
-        Content = "Nintendo DS", FontSize = 15, Foreground = Brushes.White,
+        Content = "Nintendo DS (melonDS)", FontSize = 15, Foreground = Brushes.White,
         Margin = new Thickness(0, 5, 0, 5), GroupName = "Platform", IsChecked = true
     };
 
     private readonly RadioButton _threeDs = new()
     {
-        Content = "Nintendo 3DS", FontSize = 15, Foreground = Brushes.White,
+        Content = "Nintendo 3DS (Lime3DS)", FontSize = 15, Foreground = Brushes.White,
         Margin = new Thickness(0, 5, 0, 5), GroupName = "Platform"
     };
 
-    public PlatformSelectPage()
+    private readonly Button _downloadBtn = new()
     {
+        Content = "Download & Install", Padding = new Thickness(20, 10, 20, 10),
+        Margin = new Thickness(0, 15, 0, 0), HorizontalAlignment = HorizontalAlignment.Left,
+        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0f3460")),
+        Foreground = Brushes.White, BorderThickness = new Thickness(0), IsEnabled = true
+    };
+
+    private readonly ProgressBar _progressBar = new()
+    {
+        Height = 20, Margin = new Thickness(0, 10, 0, 0),
+        Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#32CD32")),
+        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16213e")),
+        Visibility = Visibility.Collapsed
+    };
+
+    private readonly TextBlock _statusLabel = new()
+    {
+        FontSize = 13, Foreground = Brushes.Gray, Margin = new Thickness(0, 5, 0, 0)
+    };
+
+    private bool _downloadComplete;
+
+    public PlatformDownloadPage(SetupWizard wizard)
+    {
+        _wizard = wizard;
         Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1a1a2e"));
+
+        _downloadBtn.Click += Download_Click;
+
         var stack = new StackPanel { Margin = new Thickness(30) };
         stack.Children.Add(new TextBlock
         {
-            Text = "Which platform will you emulate?", FontSize = 16,
+            Text = "Select your platform:", FontSize = 16,
             Foreground = Brushes.White, Margin = new Thickness(0, 0, 0, 20)
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = "The emulator will be downloaded and installed automatically.",
+            FontSize = 12, Foreground = Brushes.Gray, Margin = new Thickness(0, 0, 0, 10)
         });
         stack.Children.Add(_ds);
         stack.Children.Add(_threeDs);
+        stack.Children.Add(_downloadBtn);
+        stack.Children.Add(_progressBar);
+        stack.Children.Add(_statusLabel);
         Content = stack;
+    }
+
+    private async void Download_Click(object sender, RoutedEventArgs e)
+    {
+        var type = _threeDs.IsChecked == true ? EmulatorType.ThreeDS : EmulatorType.DS;
+        _wizard.CurrentConfig.EmulatorType = type;
+
+        _downloadBtn.IsEnabled = false;
+        _ds.IsEnabled = false;
+        _threeDs.IsEnabled = false;
+        _progressBar.Visibility = Visibility.Visible;
+        _progressBar.Value = 0;
+        _downloadComplete = false;
+
+        var downloader = new EmulatorDownloader();
+        if (downloader.IsDownloaded(type))
+        {
+            _statusLabel.Text = "Emulator already downloaded.";
+            _progressBar.Value = 100;
+            _downloadComplete = true;
+            return;
+        }
+
+        var progress = new Progress<int>(p =>
+        {
+            _progressBar.Value = p;
+            _statusLabel.Text = $"Downloading... {p}%";
+        });
+
+        try
+        {
+            _statusLabel.Text = "Downloading emulator...";
+            await downloader.DownloadEmulator(type, progress);
+            _statusLabel.Foreground = Brushes.LightGreen;
+            _statusLabel.Text = "Download complete!";
+            _progressBar.Value = 100;
+            _downloadComplete = true;
+        }
+        catch (Exception ex)
+        {
+            _statusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#e94560"));
+            _statusLabel.Text = $"Download failed: {ex.Message}";
+            _downloadBtn.IsEnabled = true;
+            _ds.IsEnabled = true;
+            _threeDs.IsEnabled = true;
+        }
     }
 
     public bool Validate(AppConfig config)
     {
         config.EmulatorType = _threeDs.IsChecked == true ? EmulatorType.ThreeDS : EmulatorType.DS;
+
+        if (!_downloadComplete)
+        {
+            MessageBox.Show("Please download and install the emulator first.", "Validation Error",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
+        var downloader = new EmulatorDownloader();
+        if (!downloader.IsDownloaded(config.EmulatorType))
+        {
+            MessageBox.Show("Emulator download failed. Please try again.", "Validation Error",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
+        // Apply default button mappings based on platform
+        config.ButtonMappings = new()
+        {
+            [0] = (int)'Z',      // A
+            [1] = (int)'X',      // B
+            [2] = (int)'S',      // X
+            [3] = (int)'A',      // Y
+            [4] = (int)'Q',      // L
+            [5] = (int)'W',      // R
+            [6] = 0x0D,          // Start -> Enter
+            [7] = 0x08,          // Select -> Backspace
+        };
+        config.DPadMappings = new()
+        {
+            [0] = 0x26, [1] = 0x28, [2] = 0x25, [3] = 0x27,
+        };
+
         return true;
     }
 }

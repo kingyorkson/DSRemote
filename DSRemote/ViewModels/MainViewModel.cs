@@ -117,7 +117,7 @@ public class MainViewModel : INotifyPropertyChanged
         _input.SetCaptureService(_capture);
 
         AccentColor = (Color)ColorConverter.ConvertFromString(_config.Current.AccentColor);
-        _network.EmulatorName = DetectEmulatorName(_config.Current.EmulatorPath);
+        _network.EmulatorName = PlatformName(_config.Current.EmulatorType);
 
         IsSetupComplete = _config.Current.SetupComplete;
 
@@ -141,7 +141,7 @@ public class MainViewModel : INotifyPropertyChanged
         _input.LoadConfig(config);
         IsSetupComplete = true;
         AccentColor = (Color)ColorConverter.ConvertFromString(config.AccentColor);
-        _network.EmulatorName = DetectEmulatorName(config.EmulatorPath);
+        _network.EmulatorName = PlatformName(config.EmulatorType);
         _ = Task.Run(RefreshGames);
         _ = _network.StartServer();
         _discovery.Start();
@@ -338,14 +338,12 @@ public class MainViewModel : INotifyPropertyChanged
         });
     }
 
-    private static string DetectEmulatorName(string emulatorPath)
+    private static string PlatformName(EmulatorType type) => type switch
     {
-        var name = Path.GetFileNameWithoutExtension(emulatorPath)?.ToLowerInvariant() ?? "";
-        if (name.Contains("citra")) return "Citra";
-        if (name.Contains("desmume")) return "DeSmuME";
-        if (name.Contains("melon")) return "melonDS";
-        return name.Length > 0 ? char.ToUpper(name[0]) + name[1..] : "Citra";
-    }
+        EmulatorType.DS => "DS",
+        EmulatorType.ThreeDS => "3DS",
+        _ => "DS"
+    };
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
