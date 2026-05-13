@@ -113,6 +113,7 @@ public class MainViewModel : INotifyPropertyChanged
         _network = new NetworkService();
         _capture = new ScreenCaptureService();
         _discovery = new DiscoveryService();
+        _input.LoadConfig(_config.Current);
 
         AccentColor = (Color)ColorConverter.ConvertFromString(_config.Current.AccentColor);
 
@@ -135,6 +136,7 @@ public class MainViewModel : INotifyPropertyChanged
     public void CompleteSetup(AppConfig config)
     {
         _config.Save(config);
+        _input.LoadConfig(config);
         IsSetupComplete = true;
         AccentColor = (Color)ColorConverter.ConvertFromString(config.AccentColor);
         RefreshGames();

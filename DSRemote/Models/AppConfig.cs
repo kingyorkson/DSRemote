@@ -11,6 +11,24 @@ public class AppConfig
     public string AccentColor { get; set; } = "#32CD32";
     public string LastConnectedDevice { get; set; } = string.Empty;
     public bool SetupComplete { get; set; }
+    public Dictionary<int, int> ButtonMappings { get; set; } = new()
+    {
+        [0] = (int)'Z',      // A
+        [1] = (int)'X',      // B
+        [2] = (int)'S',      // X
+        [3] = (int)'A',      // Y
+        [4] = (int)'Q',      // L
+        [5] = (int)'W',      // R
+        [6] = 0x0D,          // Start = Enter
+        [7] = 0x08,          // Select = Backspace
+    };
+    public Dictionary<int, int> DPadMappings { get; set; } = new()
+    {
+        [0] = 0x26,          // Up
+        [1] = 0x28,          // Down
+        [2] = 0x25,          // Left
+        [3] = 0x27,          // Right
+    };
 
     private static readonly string ConfigPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

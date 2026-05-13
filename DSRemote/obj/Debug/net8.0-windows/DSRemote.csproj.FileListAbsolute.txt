@@ -27,3 +27,5 @@ C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\refin
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\DSRemote.pdb
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\DSRemote.genruntimeconfig.cache
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\ref\DSRemote.dll
+C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\InputMappingDialog.baml
+C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\InputMappingDialog.g.cs
