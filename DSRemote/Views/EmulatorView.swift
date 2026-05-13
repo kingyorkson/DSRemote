@@ -33,6 +33,17 @@ struct EmulatorView: View {
                     Text("This will stop the emulator and return to game selection.")
                 }
 
+                // Connection type badge
+                Text(network.connectionType.rawValue)
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(network.connectionType == .usb ? settings.accentColor : .blue)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background((network.connectionType == .usb ? settings.accentColor : Color.blue).opacity(0.15))
+                    .cornerRadius(4)
+                    .padding(.leading, 4)
+
                 Spacer()
                 Text("DSRemote").font(.caption).foregroundColor(.gray)
                 Spacer()

@@ -57,7 +57,15 @@ struct GameListView: View {
                 .font(.headline)
                 .foregroundColor(.white)
 
-            Spacer()
+            // Connection type badge
+            Text(network.connectionType.rawValue)
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundColor(network.connectionType == .usb ? settings.accentColor : .blue)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background((network.connectionType == .usb ? settings.accentColor : Color.blue).opacity(0.15))
+                .cornerRadius(4)
 
             Menu {
                 Button(action: { showLayoutPicker = true }) {

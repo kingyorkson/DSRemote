@@ -66,6 +66,9 @@ struct ContentView: View {
                     }
                 }
             )
+            network.setAutoConnectHandler {
+                screen = .gameList
+            }
             network.onTopScreenshot = { data in
                 DispatchQueue.main.async {
                     if let image = UIImage(data: data) {

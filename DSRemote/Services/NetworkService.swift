@@ -2,19 +2,26 @@ import Foundation
 import Network
 import UIKit
 
+enum ConnectionType: String {
+    case wifi = "Wi-Fi"
+    case usb = "USB"
+}
+
 @MainActor
 class NetworkService: ObservableObject {
     @Published var isConnected = false
     @Published var connectionStatus = "Disconnected"
     @Published var games: [GameRom] = []
     @Published var discoveredHosts: [String] = []
+    @Published var connectionType: ConnectionType = .wifi
 
     private var connection: NWConnection?
     private var host: NWEndpoint.Host = "127.0.0.1"
     private var port: NWEndpoint.Port = 9876
     private var onScreenshot: ((Data) -> Void)?
     private var onDisconnect: (() -> Void)?
-    
+    private var onAutoConnect: (() -> Void)?
+
     private var udpListener: NWListener?
 
     private var receivedBuffer = Data()
@@ -24,6 +31,10 @@ class NetworkService: ObservableObject {
         self.port = NWEndpoint.Port(rawValue: UInt16(port)) ?? 9876
         self.onScreenshot = onScreenshot
         self.onDisconnect = onDisconnect
+    }
+
+    func setAutoConnectHandler(_ handler: @escaping () -> Void) {
+        onAutoConnect = handler
     }
 
     var onTopScreenshot: ((Data) -> Void)?
@@ -41,9 +52,19 @@ class NetworkService: ObservableObject {
                     let parts = msg.dropFirst(9).split(separator: ":")
                     if parts.count >= 2 {
                         let ip = String(parts[0])
+                        let transportType: ConnectionType = parts.count >= 4 && parts[3] == "USB" ? .usb : .wifi
+
                         DispatchQueue.main.async {
-                            if !self.discoveredHosts.contains(ip) {
-                                self.discoveredHosts.append(ip)
+                            if transportType == .usb {
+                                // Auto-connect via USB
+                                self.host = NWEndpoint.Host(ip)
+                                self.connect()
+                                self.onAutoConnect?()
+                            } else {
+                                // WiFi: show in list for manual tap
+                                if !self.discoveredHosts.contains(ip) {
+                                    self.discoveredHosts.append(ip)
+                                }
                             }
                         }
                     }
@@ -97,6 +118,7 @@ class NetworkService: ObservableObject {
         connection = nil
         isConnected = false
         connectionStatus = "Disconnected"
+        connectionType = .wifi
         games = []
     }
 
@@ -158,12 +180,17 @@ class NetworkService: ObservableObject {
             guard !jsonData.isEmpty,
                   let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else { continue }
 
-            if let gamesData = json["games"] as? [[String: Any]] {
+            if let action = json["action"] as? String {
+                if action == "disconnected" {
+                    isConnected = false
+                    connectionStatus = "Disconnected by server"
+                    onDisconnect?()
+                } else if action == "welcome", let connType = json["connection"] as? String {
+                    connectionType = connType == "usb" ? .usb : .wifi
+                    connectionStatus = "Connected via \(connectionType.rawValue)"
+                }
+            } else if let gamesData = json["games"] as? [[String: Any]] {
                 parseGames(gamesData)
-            } else if let action = json["action"] as? String, action == "disconnected" {
-                isConnected = false
-                connectionStatus = "Disconnected by server"
-                onDisconnect?()
             } else if let message = json["message"] as? String {
                 connectionStatus = message
             }

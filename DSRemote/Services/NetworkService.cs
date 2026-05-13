@@ -47,23 +47,42 @@ public class NetworkService : IDisposable
                 _client = client;
                 _stream = client.GetStream();
 
+                var remoteEp = (IPEndPoint)client.Client.RemoteEndPoint!;
+                var connType = IsUsbAddress(remoteEp.Address) ? ConnectionType.USB : ConnectionType.WiFi;
+
                 var info = new ConnectionInfo
                 {
-                    DeviceName = $"Device_{((IPEndPoint)client.Client.RemoteEndPoint!).Address}",
-                    RemoteAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address,
+                    DeviceName = $"Device_{remoteEp.Address}",
+                    RemoteAddress = remoteEp.Address,
                     Port = _port,
                     IsConnected = true,
                     ConnectedAt = DateTime.Now,
-                    Type = ConnectionType.WiFi
+                    Type = connType
                 };
                 CurrentConnection = info;
                 DeviceConnected?.Invoke(info);
+
+                // Send welcome with connection type
+                var welcome = JsonSerializer.Serialize(new
+                {
+                    action = "welcome",
+                    connection = connType == ConnectionType.USB ? "usb" : "wifi"
+                });
+                _ = SendMessage(welcome);
 
                 await ReadLoop(ct);
             }
             catch (OperationCanceledException) { break; }
             catch { continue; }
         }
+    }
+
+    private static bool IsUsbAddress(IPAddress address)
+    {
+        var bytes = address.GetAddressBytes();
+        if (bytes[0] == 169 && bytes[1] == 254) return true;
+        if (bytes[0] == 192 && bytes[1] == 168 && bytes[2] == 42) return true;
+        return false;
     }
 
     private async Task ReadLoop(CancellationToken ct)
