@@ -11,117 +11,135 @@ struct EmulatorView: View {
     @State private var showPowerAlert = false
 
     var body: some View {
-        GeometryReader { geo in
-            let isLandscape = geo.size.width > geo.size.height
-            let screenHeight = isLandscape ? geo.size.height * 0.85 : geo.size.height * 0.50
-            let controlHeight = isLandscape ? geo.size.height * 0.85 : geo.size.height * 0.45
-
-            VStack(spacing: 4) {
-                if isLandscape {
-                    HStack(spacing: 4) {
-                        screensSection(height: screenHeight)
-                        controlsSection(height: controlHeight)
+        VStack(spacing: 6) {
+            // Power + Disconnect bar
+            HStack {
+                Button(action: { showPowerAlert = true }) {
+                    Image(systemName: "power")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(6)
+                        .background(Color.red.opacity(0.15))
+                        .clipShape(Circle())
+                }
+                .alert("Quit Game?", isPresented: $showPowerAlert) {
+                    Button("Cancel", role: .cancel) {}
+                    Button("Quit", role: .destructive) {
+                        network.sendInput(.buttonDown, args: [99])
+                        onPowerOff()
                     }
-                } else {
-                    screensSection(height: screenHeight)
-                    controlsSection(height: controlHeight)
+                } message: {
+                    Text("This will save and return to game selection.")
                 }
 
-                HStack {
-                    Button(action: { showPowerAlert = true }) {
+                Spacer()
+
+                Text("DSRemote")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+
+                Spacer()
+
+                Button(action: onDisconnect) {
+                    HStack(spacing: 3) {
                         Image(systemName: "power")
-                            .font(.title3)
-                            .foregroundColor(.red)
-                            .padding(8)
-                            .background(Color.red.opacity(0.15))
-                            .clipShape(Circle())
+                            .font(.caption2)
+                        Text("Disconnect")
+                            .font(.caption2)
                     }
-                    .alert("Quit Game?", isPresented: $showPowerAlert) {
-                        Button("Cancel", role: .cancel) {}
-                        Button("Quit", role: .destructive) {
-                            network.sendInput(.buttonDown, args: [99])
-                            onPowerOff()
-                        }
-                    } message: {
-                        Text("This will save and return to game selection.")
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(hex: "#e94560"))
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+
+            // Top screen
+            ScreenView(image: $topScreen, label: "Top Screen")
+                .frame(height: UIScreen.main.bounds.height * 0.32)
+
+            // Bottom screen
+            ScreenView(image: $bottomScreen, label: "Bottom Screen")
+                .frame(height: UIScreen.main.bounds.height * 0.22)
+                .overlay(
+                    TouchSurfaceView(action: { point in
+                        network.sendInput(.touchDown, args: [Float(point.x), Float(point.y)])
+                    })
+                )
+
+            // 3DS-style controls
+            VStack(spacing: 10) {
+                // L / R shoulder buttons
+                HStack(spacing: 20) {
+                    ShoulderLabel(label: "L", onPress: {
+                        network.sendInput(.buttonDown, args: [4])
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [4]) }
+                    })
+                    Spacer()
+                    ShoulderLabel(label: "R", onPress: {
+                        network.sendInput(.buttonDown, args: [5])
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [5]) }
+                    })
+                }
+                .padding(.horizontal, 20)
+
+                // D-Pad (left) + ABXY (right)
+                HStack(alignment: .center, spacing: 0) {
+                    // D-Pad
+                    DPadView { direction in
+                        network.sendInput(.dPadPress, args: [Float(direction.rawValue)])
                     }
+                    .frame(maxWidth: .infinity)
 
                     Spacer()
 
-                    Button(action: onDisconnect) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "power")
-                            Text("Disconnect")
-                                .font(.caption)
+                    // ABXY diamond
+                    VStack(spacing: 6) {
+                        CircleButton(label: "Y", color: .yellow, onPress: { network.sendInput(.buttonDown, args: [3]) }, onRelease: { network.sendInput(.buttonUp, args: [3]) })
+                        HStack(spacing: 16) {
+                            CircleButton(label: "X", color: .blue, onPress: { network.sendInput(.buttonDown, args: [2]) }, onRelease: { network.sendInput(.buttonUp, args: [2]) })
+                            CircleButton(label: "B", color: .red, onPress: { network.sendInput(.buttonDown, args: [1]) }, onRelease: { network.sendInput(.buttonUp, args: [1]) })
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(hex: "#e94560"))
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+                        CircleButton(label: "A", color: .green, onPress: { network.sendInput(.buttonDown, args: [0]) }, onRelease: { network.sendInput(.buttonUp, args: [0]) })
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                .padding(.horizontal, 16)
+
+                // Joystick + Start/Select
+                HStack(alignment: .center, spacing: 0) {
+                    JoystickView { x, y in
+                        network.sendInput(.joystickMove, args: [x, y])
+                    }
+                    .frame(width: 70, height: 70)
+                    .frame(maxWidth: .infinity)
+
+                    Spacer()
+
+                    HStack(spacing: 20) {
+                        Button("Select") {
+                            network.sendInput(.buttonDown, args: [6])
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [6]) }
+                        }
+                        .buttonStyle(ControlButtonStyle(color: settings.accentColor))
+
+                        Button("Start") {
+                            network.sendInput(.buttonDown, args: [7])
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [7]) }
+                        }
+                        .buttonStyle(ControlButtonStyle(color: settings.accentColor))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(.horizontal, 16)
             }
+            .padding(.bottom, 8)
         }
         .background(Color(hex: "#1a1a2e"))
         .ignoresSafeArea(.keyboard)
-    }
-
-    private func screensSection(height: CGFloat) -> some View {
-        VStack(spacing: 4) {
-            ScreenView(image: $topScreen, label: "Top Screen")
-                .frame(height: height * 0.48)
-            ScreenView(image: $bottomScreen, label: "Bottom Screen")
-                .frame(height: height * 0.48)
-                .overlay(
-                    TouchSurfaceView(action: { point in
-                        let nx = Float(point.x)
-                        let ny = Float(point.y)
-                        network.sendInput(.touchDown, args: [nx, ny])
-                    })
-                )
-        }
-    }
-
-    private func controlsSection(height: CGFloat) -> some View {
-        VStack(spacing: 8) {
-            ControlPadView { button in
-                network.sendInput(.buttonDown, args: [Float(button.rawValue)])
-            } onRelease: { button in
-                network.sendInput(.buttonUp, args: [Float(button.rawValue)])
-            }
-
-            HStack(spacing: 16) {
-                JoystickView { x, y in
-                    network.sendInput(.joystickMove, args: [x, y])
-                }
-                .frame(width: height * 0.25, height: height * 0.25)
-
-                DPadView { direction in
-                    network.sendInput(.dPadPress, args: [Float(direction.rawValue)])
-                }
-
-                VStack(spacing: 4) {
-                    Button("Start") {
-                        network.sendInput(.buttonDown, args: [3])
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                            network.sendInput(.buttonUp, args: [3])
-                        }
-                    }
-                    .buttonStyle(ControlButtonStyle(color: settings.accentColor))
-
-                    Button("Select") {
-                        network.sendInput(.buttonDown, args: [4])
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                            network.sendInput(.buttonUp, args: [4])
-                        }
-                    }
-                    .buttonStyle(ControlButtonStyle(color: settings.accentColor))
-                }
-            }
-        }
     }
 }
 
@@ -211,5 +229,51 @@ struct ControlButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(color, lineWidth: 1)
             )
+    }
+}
+
+struct CircleButton: View {
+    let label: String
+    let color: Color
+    let onPress: () -> Void
+    let onRelease: () -> Void
+
+    var body: some View {
+        Button(action: {}) {
+            Text(label)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(width: 46, height: 46)
+                .background(color.opacity(0.3))
+                .clipShape(Circle())
+                .overlay(Circle().stroke(color, lineWidth: 2))
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in onPress() }
+                .onEnded { _ in onRelease() }
+        )
+    }
+}
+
+struct ShoulderLabel: View {
+    let label: String
+    let onPress: () -> Void
+
+    var body: some View {
+        Button(action: onPress) {
+            Text(label)
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(width: 60, height: 28)
+                .background(Color(hex: "#333333"))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color(hex: "#555555"), lineWidth: 1)
+                )
+        }
     }
 }

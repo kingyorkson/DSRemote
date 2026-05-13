@@ -95,9 +95,9 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get
         {
-            var r = (byte)(_accentColor.R * 0.1);
-            var g = (byte)(_accentColor.G * 0.1);
-            var b = (byte)(_accentColor.B * 0.1);
+            var r = (byte)(_accentColor.R * 0.15 + 0x1a * 0.85);
+            var g = (byte)(_accentColor.G * 0.15 + 0x1a * 0.85);
+            var b = (byte)(_accentColor.B * 0.15 + 0x2e * 0.85);
             return Color.FromRgb(r, g, b);
         }
     }
@@ -215,16 +215,28 @@ public class MainViewModel : INotifyPropertyChanged
         {
             using var doc = System.Text.Json.JsonDocument.Parse(json);
             var root = doc.RootElement;
-            if (root.TryGetProperty("action", out var action) && action.GetString() == "deviceInfo")
+            var action = root.TryGetProperty("action", out var actionProp) ? actionProp.GetString() : null;
+            switch (action)
             {
-                if (root.TryGetProperty("name", out var name))
-                {
-                    App.Current.Dispatcher.Invoke(() =>
+                case "deviceInfo":
+                    if (root.TryGetProperty("name", out var name))
                     {
-                        DeviceName = name.GetString() ?? "Unknown";
-                        StatusText = $"Connected to {DeviceName}";
-                    });
-                }
+                        App.Current.Dispatcher.Invoke(() =>
+                        {
+                            DeviceName = name.GetString() ?? "Unknown";
+                            StatusText = $"Connected to {DeviceName}";
+                        });
+                    }
+                    break;
+                case "launch":
+                    if (root.TryGetProperty("path", out var pathProp))
+                    {
+                        var path = pathProp.GetString();
+                        var game = Games.FirstOrDefault(g => g.FullPath == path);
+                        if (game != null)
+                            _ = LaunchGame(game);
+                    }
+                    break;
             }
         }
         catch { }
