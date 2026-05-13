@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import UIKit
 
 @MainActor
 class NetworkService: ObservableObject {
@@ -17,7 +18,7 @@ class NetworkService: ObservableObject {
 
     func configure(host: String, port: Int, onScreenshot: @escaping (Data) -> Void, onDisconnect: @escaping () -> Void) {
         self.host = NWEndpoint.Host(host)
-        self.port = NWEndpoint.Port(UInt16(port))
+        self.port = NWEndpoint.Port(rawValue: UInt16(port)) ?? 9876
         self.onScreenshot = onScreenshot
         self.onDisconnect = onDisconnect
     }
@@ -33,7 +34,7 @@ class NetworkService: ObservableObject {
         connection = NWConnection(host: host, port: port, using: params)
 
         connection?.stateUpdateHandler = { [weak self] state in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 switch state {
                 case .ready:
                     self?.isConnected = true
@@ -69,22 +70,22 @@ class NetworkService: ObservableObject {
 
     private func receiveLoop() {
         connection?.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
 
-            if let data = data, !data.isEmpty {
-                self.processData(data)
-            }
+                if let data = data, !data.isEmpty {
+                    self.processData(data)
+                }
 
-            if isComplete || error != nil {
-                DispatchQueue.main.async {
+                if isComplete || error != nil {
                     self.isConnected = false
                     self.connectionStatus = "Disconnected"
                     self.onDisconnect?()
+                    return
                 }
-                return
-            }
 
-            self.receiveLoop()
+                self.receiveLoop()
+            }
         }
     }
 
@@ -93,32 +94,31 @@ class NetworkService: ObservableObject {
 
         let imgMarker = "IMAGE:".data(using: .utf8)!
         while true {
-            if receivedBuffer.count >= imgMarker.count,
-               receivedBuffer[..<imgMarker.count] == imgMarker {
-                let rest = receivedBuffer[imgMarker.count...]
-                if let endIndex = rest.firstIndex(of: UInt8(ascii: "\n")) ?? rest.firstIndex(of: UInt8(ascii: "\0")) {
-                    let base64Data = rest[..<endIndex]
-                    if let base64Str = String(data: base64Data, encoding: .utf8),
-                       let imgData = Data(base64Encoded: base64Str) {
-                        onScreenshot?(imgData)
-                    }
-                    receivedBuffer = Data(rest[endIndex+1...])
-                    continue
-                }
+            guard receivedBuffer.count >= imgMarker.count,
+                  receivedBuffer[..<imgMarker.count] == imgMarker else {
+                break
             }
 
-            if let json = try? JSONSerialization.jsonObject(with: receivedBuffer) as? [String: Any] {
-                if let gamesData = json["games"] as? [[String: Any]] {
-                    parseGames(gamesData)
-                } else if let message = json["message"] as? String {
-                    DispatchQueue.main.async {
-                        self.connectionStatus = message
-                    }
+            let rest = receivedBuffer[imgMarker.count...]
+            if let endIndex = rest.firstIndex(of: UInt8(ascii: "\n")) ?? rest.firstIndex(of: UInt8(ascii: "\0")) {
+                let base64Data = rest[..<endIndex]
+                if let base64Str = String(data: base64Data, encoding: .utf8),
+                   let imgData = Data(base64Encoded: base64Str) {
+                    onScreenshot?(imgData)
                 }
-                receivedBuffer = Data()
+                receivedBuffer = Data(rest[rest.index(after: endIndex)...])
                 continue
             }
             break
+        }
+
+        if let json = try? JSONSerialization.jsonObject(with: receivedBuffer) as? [String: Any] {
+            if let gamesData = json["games"] as? [[String: Any]] {
+                parseGames(gamesData)
+            } else if let message = json["message"] as? String {
+                connectionStatus = message
+            }
+            receivedBuffer = Data()
         }
     }
 
@@ -132,9 +132,7 @@ class NetworkService: ObservableObject {
                 parsed.append(GameRom(name: name, fullPath: path, platform: platform, sizeFormatted: size))
             }
         }
-        DispatchQueue.main.async {
-            self.games = parsed
-        }
+        games = parsed
     }
 
     func sendInput(_ type: InputType, args: [Float]) {

@@ -35,13 +35,11 @@ struct SettingsView: View {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 70))], spacing: 12) {
                             ForEach(presetColors, id: \.hex) { preset in
                                 Button(action: {
-                                    if let color = Color(hex: preset.hex) {
-                                        settings.accentColor = color
-                                    }
+                                    settings.accentColor = Color(hex: preset.hex)
                                 }) {
                                     VStack(spacing: 4) {
                                         Circle()
-                                            .fill(Color(hex: preset.hex) ?? .gray)
+                                            .fill(Color(hex: preset.hex))
                                             .frame(width: 44, height: 44)
                                             .overlay(
                                                 Circle()

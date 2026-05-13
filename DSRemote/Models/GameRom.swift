@@ -6,4 +6,8 @@ struct GameRom: Identifiable, Codable {
     let fullPath: String
     let platform: String
     let sizeFormatted: String
+
+    enum CodingKeys: String, CodingKey {
+        case name, fullPath, platform, sizeFormatted
+    }
 }

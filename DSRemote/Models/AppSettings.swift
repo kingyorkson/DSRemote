@@ -21,7 +21,7 @@ class AppSettings: ObservableObject {
 
     init() {
         let savedHex = UserDefaults.standard.string(forKey: "accentColor") ?? "#32CD32"
-        accentColor = Color(hex: savedHex) ?? .green
+        accentColor = Color(hex: savedHex)
         lastHost = UserDefaults.standard.string(forKey: "lastHost") ?? ""
         lastPort = UserDefaults.standard.integer(forKey: "lastPort")
         if lastPort == 0 { lastPort = 9876 }
@@ -36,7 +36,7 @@ extension Color {
         return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
     }
 
-    init?(hex: String) {
+    init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
@@ -47,7 +47,8 @@ extension Color {
         case 8:
             (r, g, b, a) = ((int >> 24) & 0xFF, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
         default:
-            return nil
+            self = .gray
+            return
         }
         self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
     }
