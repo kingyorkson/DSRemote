@@ -67,8 +67,27 @@ public class MainViewModel : INotifyPropertyChanged
     public Color AccentColor
     {
         get => _accentColor;
-        set { _accentColor = value; OnPropertyChanged(); }
+        set
+        {
+            _accentColor = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(BackgroundColor));
+            OnPropertyChanged(nameof(BackgroundBrush));
+        }
     }
+
+    public Color BackgroundColor
+    {
+        get
+        {
+            var r = (byte)(_accentColor.R * 0.1);
+            var g = (byte)(_accentColor.G * 0.1);
+            var b = (byte)(_accentColor.B * 0.1);
+            return Color.FromRgb(r, g, b);
+        }
+    }
+
+    public SolidColorBrush BackgroundBrush => new(BackgroundColor);
 
     public MainViewModel()
     {
@@ -91,6 +110,7 @@ public class MainViewModel : INotifyPropertyChanged
         _network.DeviceConnected += OnDeviceConnected;
         _network.DeviceDisconnected += OnDeviceDisconnected;
         _network.ScreenshotReceived += OnScreenshotReceived;
+        _network.MessageReceived += OnMessageReceived;
         _emulator.StateChanged += OnEmulatorStateChanged;
     }
 
@@ -166,6 +186,27 @@ public class MainViewModel : INotifyPropertyChanged
             StatusText = "Device disconnected";
             PhoneScreenImage = null;
         });
+    }
+
+    private void OnMessageReceived(string json)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("action", out var action) && action.GetString() == "deviceInfo")
+            {
+                if (root.TryGetProperty("name", out var name))
+                {
+                    App.Current.Dispatcher.Invoke(() =>
+                    {
+                        DeviceName = name.GetString() ?? "Unknown";
+                        StatusText = $"Connected to {DeviceName}";
+                    });
+                }
+            }
+        }
+        catch { }
     }
 
     private void OnScreenshotReceived(byte[] jpegData)

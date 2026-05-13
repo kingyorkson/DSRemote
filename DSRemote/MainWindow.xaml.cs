@@ -45,13 +45,36 @@ public partial class MainWindow : Window
         StartCaptureLoop();
     }
 
+    private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+            DragMove();
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void Maximize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
     private void StartSlideMenuWatcher()
     {
         _slideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         _slideTimer.Tick += (_, _) =>
         {
             var pos = Mouse.GetPosition(this);
-            bool shouldShow = pos.X >= 0 && pos.X <= 5;
+            bool shouldShow = pos.X >= 0 && pos.X <= 5 && pos.Y > 36;
 
             if (shouldShow && !_slideMenuVisible)
             {
@@ -59,7 +82,7 @@ public partial class MainWindow : Window
                 AnimateSlideMenu(0);
             }
             else if (!shouldShow && _slideMenuVisible &&
-                     (pos.X > 230 || pos.Y < 0 || pos.Y > ActualHeight))
+                     (pos.X > 230 || pos.Y < 36 || pos.Y > ActualHeight))
             {
                 _slideMenuVisible = false;
                 AnimateSlideMenu(-220);

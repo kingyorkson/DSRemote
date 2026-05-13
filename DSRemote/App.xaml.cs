@@ -7,13 +7,15 @@ public partial class App : Application
 {
     private TaskbarIcon? _trayIcon;
     private MainWindow? _mainWindow;
+    private System.Drawing.Bitmap? _trayBitmap;
 
     private void Application_Startup(object sender, StartupEventArgs e)
     {
-        using var iconStream = CreateAppIcon();
+        _trayBitmap = CreateAppIcon();
+        var iconHandle = _trayBitmap.GetHicon();
         _trayIcon = new TaskbarIcon
         {
-            Icon = new System.Drawing.Icon(iconStream),
+            Icon = System.Drawing.Icon.FromHandle(iconHandle),
             ToolTipText = "DSRemote",
             Visibility = Visibility.Visible
         };
@@ -34,7 +36,7 @@ public partial class App : Application
         _mainWindow.Show();
     }
 
-    private static System.IO.MemoryStream CreateAppIcon()
+    private static System.Drawing.Bitmap CreateAppIcon()
     {
         var bmp = new System.Drawing.Bitmap(32, 32);
         using (var g = System.Drawing.Graphics.FromImage(bmp))
@@ -47,26 +49,7 @@ public partial class App : Application
             using var font = new System.Drawing.Font("Segoe UI", 12, System.Drawing.FontStyle.Bold);
             g.DrawString("3DS", font, System.Drawing.Brushes.White, 4, 6);
         }
-
-        var ms = new System.IO.MemoryStream();
-        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-        ms.Position = 0;
-
-        var iconStream = new System.IO.MemoryStream();
-        using var bw = new System.IO.BinaryWriter(iconStream);
-        bw.Write((short)0);
-        bw.Write((short)1);
-        bw.Write((short)1);
-        bw.Write((byte)32);
-        bw.Write((byte)32);
-        bw.Write((byte)0);
-        bw.Write((byte)0);
-        bw.Write(0);
-        bw.Write((int)ms.Length);
-        bw.Write(22);
-        ms.CopyTo(iconStream);
-        iconStream.Position = 0;
-        return iconStream;
+        return bmp;
     }
 
     private void ShowMainWindow()
@@ -84,5 +67,6 @@ public partial class App : Application
     private void Application_Exit(object sender, ExitEventArgs e)
     {
         _trayIcon?.Dispose();
+        _trayBitmap?.Dispose();
     }
 }
