@@ -141,17 +141,19 @@ public class MainViewModel : INotifyPropertyChanged
         _discovery.Start();
     }
 
-    public void RefreshGames()
+    public async void RefreshGames()
     {
         Games.Clear();
         var found = _library.ScanFolders(_config.Current.GameFolders);
         foreach (var game in found)
             Games.Add(game);
+        if (_network.IsConnected)
+            await _network.SendGameList(Games.ToList());
     }
 
     public async Task LaunchGame(GameRom game)
     {
-        _network.Disconnect();
+        await _network.Disconnect();
         await _emulator.LaunchGame(_config.Current, game);
     }
 
@@ -160,9 +162,9 @@ public class MainViewModel : INotifyPropertyChanged
         _emulator.StopEmulation();
     }
 
-    public void DisconnectDevice()
+    public async void DisconnectDevice()
     {
-        _network.Disconnect();
+        await _network.Disconnect();
         IsConnected = false;
         DeviceName = string.Empty;
         StatusText = "Not connected";
@@ -185,13 +187,14 @@ public class MainViewModel : INotifyPropertyChanged
             await _network.SendMessage(b64);
     }
 
-    private void OnDeviceConnected(ConnectionInfo info)
+    private async void OnDeviceConnected(ConnectionInfo info)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        await App.Current.Dispatcher.Invoke(async () =>
         {
             IsConnected = true;
             DeviceName = info.DeviceName;
             StatusText = $"Connected to {info.DeviceName}";
+            await _network.SendGameList(Games.ToList());
         });
     }
 

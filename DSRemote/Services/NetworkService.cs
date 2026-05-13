@@ -83,7 +83,7 @@ public class NetworkService : IDisposable
         catch { }
         finally
         {
-            Disconnect();
+            _ = Disconnect();
         }
     }
 
@@ -112,8 +112,12 @@ public class NetworkService : IDisposable
     public async Task SendMessage(string message)
     {
         if (_stream == null) return;
-        var data = Encoding.UTF8.GetBytes(message);
-        await _stream.WriteAsync(data);
+        try
+        {
+            var data = Encoding.UTF8.GetBytes(message + "\n");
+            await _stream.WriteAsync(data);
+        }
+        catch { }
     }
 
     public async Task SendInput(InputType type, params float[] args)
@@ -126,8 +130,29 @@ public class NetworkService : IDisposable
         await SendMessage(msg);
     }
 
-    public void Disconnect()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
+
+    public async Task SendGameList(IEnumerable<GameRom> games)
+    {
+        try
+        {
+            var msg = JsonSerializer.Serialize(new { games }, _jsonOptions);
+            await SendMessage(msg);
+        }
+        catch { }
+    }
+
+    public async Task Disconnect()
+    {
+        try
+        {
+            await SendMessage("{\"action\":\"disconnected\"}");
+        }
+        catch { }
         _stream?.Close();
         _client?.Close();
         CurrentConnection = null;

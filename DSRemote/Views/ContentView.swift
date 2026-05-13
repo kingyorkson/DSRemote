@@ -55,6 +55,7 @@ struct ContentView: View {
                 },
                 onDisconnect: {
                     DispatchQueue.main.async {
+                        network.disconnect()
                         screen = .connect
                     }
                 }

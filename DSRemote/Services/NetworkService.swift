@@ -141,25 +141,38 @@ class NetworkService: ObservableObject {
             break
         }
 
-        if let json = try? JSONSerialization.jsonObject(with: receivedBuffer) as? [String: Any] {
+        while true {
+            guard let newlineIndex = receivedBuffer.firstIndex(of: UInt8(ascii: "\n")) else { break }
+            let jsonData = receivedBuffer[..<newlineIndex]
+            receivedBuffer = Data(receivedBuffer[receivedBuffer.index(after: newlineIndex)...])
+
+            guard !jsonData.isEmpty,
+                  let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else { continue }
+
             if let gamesData = json["games"] as? [[String: Any]] {
                 parseGames(gamesData)
+            } else if let action = json["action"] as? String, action == "disconnected" {
+                isConnected = false
+                connectionStatus = "Disconnected by server"
+                onDisconnect?()
             } else if let message = json["message"] as? String {
                 connectionStatus = message
             }
-            receivedBuffer = Data()
         }
     }
 
     private func parseGames(_ gamesData: [[String: Any]]) {
         var parsed: [GameRom] = []
         for g in gamesData {
-            if let name = g["name"] as? String,
-               let path = g["fullPath"] as? String,
-               let platform = g["platform"] as? String,
-               let size = g["sizeFormatted"] as? String {
-                parsed.append(GameRom(name: name, fullPath: path, platform: platform, sizeFormatted: size))
-            }
+            guard let name = (g["name"] as? String) ?? (g["Name"] as? String),
+                  let path = (g["fullPath"] as? String) ?? (g["FullPath"] as? String) else { continue }
+            let platform: String = {
+                if let s = g["platform"] as? String ?? g["Platform"] as? String { return s }
+                if let n = g["platform"] as? Int ?? g["Platform"] as? Int { return n == 0 ? "DS" : "ThreeDS" }
+                return ""
+            }()
+            let size = (g["sizeFormatted"] as? String ?? g["SizeFormatted"] as? String) ?? ""
+            parsed.append(GameRom(name: name, fullPath: path, platform: platform, sizeFormatted: size))
         }
         games = parsed
     }
