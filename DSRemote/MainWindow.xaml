@@ -239,6 +239,9 @@
                 <Button Content="Disconnect" Padding="10" Margin="0 0 0 10"
                         Background="#e94560" Foreground="White" BorderThickness="0"
                         Click="Disconnect_Click"/>
+                <Button Content="Input Bindings" Padding="10" Margin="0 0 0 10"
+                        Background="#16213e" Foreground="White" BorderThickness="0"
+                        Click="InputBindings_Click"/>
                 <Button Content="Settings" Padding="10" Margin="0 0 0 10"
                         Background="#16213e" Foreground="White" BorderThickness="0"
                         Click="Settings_Click"/>

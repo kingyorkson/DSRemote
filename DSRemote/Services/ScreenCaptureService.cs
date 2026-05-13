@@ -27,6 +27,8 @@ public class ScreenCaptureService
     private const uint SRCCOPY = 0x00CC0020;
 
     private readonly ScreenRegionDetector _detector = new();
+    public Rectangle LastBottomScreenRect { get; private set; }
+    public Size LastWindowSize { get; private set; }
 
     public byte[]? CaptureWindow(IntPtr hWnd)
     {
@@ -88,6 +90,8 @@ public class ScreenCaptureService
         }
 
         var (topRect, bottomRect) = _detector.Detect(fullBitmap);
+        LastBottomScreenRect = bottomRect;
+        LastWindowSize = new Size(width, height);
 
         string EncodeRegion(Bitmap source, Rectangle region)
         {

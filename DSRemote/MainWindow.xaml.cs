@@ -149,48 +149,27 @@ public partial class MainWindow : Window
         _vm.StopEmulation();
     }
 
+    private void InputBindings_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new InputMappingDialog(
+            _vm.Config.ButtonMappings,
+            _vm.Config.DPadMappings);
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true && dialog.ResultConfig != null)
+        {
+            _vm.Config.ButtonMappings = dialog.ResultConfig.ButtonMappings;
+            _vm.Config.DPadMappings = dialog.ResultConfig.DPadMappings;
+            _vm.Config.Save();
+            _vm.CompleteSetup(_vm.Config);
+        }
+    }
+
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
-        var contextMenu = new ContextMenu();
-
-        var wizardItem = new MenuItem
-        {
-            Header = "Setup Wizard",
-            Foreground = Brushes.White,
-            Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16213e")),
-        };
-        wizardItem.Click += (_, _) =>
-        {
-            var wizard = new SetupWizard();
-            wizard.ShowDialog();
-            if (wizard.Result != null)
-                _vm.CompleteSetup(wizard.Result);
-        };
-        contextMenu.Items.Add(wizardItem);
-
-        var bindingsItem = new MenuItem
-        {
-            Header = "Input Bindings",
-            Foreground = Brushes.White,
-            Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16213e")),
-        };
-        bindingsItem.Click += (_, _) =>
-        {
-            var dialog = new InputMappingDialog(
-                _vm.Config.ButtonMappings,
-                _vm.Config.DPadMappings);
-            dialog.Owner = this;
-            if (dialog.ShowDialog() == true && dialog.ResultConfig != null)
-            {
-                _vm.Config.ButtonMappings = dialog.ResultConfig.ButtonMappings;
-                _vm.Config.DPadMappings = dialog.ResultConfig.DPadMappings;
-                _vm.Config.Save();
-                _vm.CompleteSetup(_vm.Config);
-            }
-        };
-        contextMenu.Items.Add(bindingsItem);
-
-        contextMenu.IsOpen = true;
+        var wizard = new SetupWizard();
+        wizard.ShowDialog();
+        if (wizard.Result != null)
+            _vm.CompleteSetup(wizard.Result);
     }
 
     private void RefreshGames_Click(object sender, RoutedEventArgs e)

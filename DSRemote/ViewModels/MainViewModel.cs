@@ -114,6 +114,7 @@ public class MainViewModel : INotifyPropertyChanged
         _capture = new ScreenCaptureService();
         _discovery = new DiscoveryService();
         _input.LoadConfig(_config.Current);
+        _input.SetCaptureService(_capture);
 
         AccentColor = (Color)ColorConverter.ConvertFromString(_config.Current.AccentColor);
 
@@ -248,6 +249,15 @@ public class MainViewModel : INotifyPropertyChanged
                         break;
                     case "JoystickMove":
                         if (args.Count >= 2) _input.SendJoystickMove(hWnd.Value, args[0], args[1]);
+                        break;
+                    case "TouchDown":
+                        if (args.Count >= 2) _input.SendTouchDown(hWnd.Value, args[0], args[1]);
+                        break;
+                    case "TouchMove":
+                        if (args.Count >= 2) _input.SendTouchMove(hWnd.Value, args[0], args[1]);
+                        break;
+                    case "TouchUp":
+                        _input.SendTouchUp(hWnd.Value);
                         break;
                 }
                 return;

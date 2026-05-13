@@ -168,10 +168,25 @@ public class EmulatorSelectPage : Page, ISetupPage
 
     public bool Validate(AppConfig config)
     {
-        if (_melonDS.IsChecked == true) config.EmulatorPath = FindEmulator("melonDS.exe");
-        else if (_desmume.IsChecked == true) config.EmulatorPath = FindEmulator("DeSmuME.exe");
-        else if (_citra.IsChecked == true) config.EmulatorPath = FindEmulator("citra-qt.exe");
-        else if (_custom.IsChecked == true) config.EmulatorPath = _pathBox.Text;
+        if (_melonDS.IsChecked == true)
+        {
+            config.EmulatorPath = FindEmulator("melonDS.exe");
+            ApplyDefaults(config, "melonDS");
+        }
+        else if (_desmume.IsChecked == true)
+        {
+            config.EmulatorPath = FindEmulator("DeSmuME.exe");
+            ApplyDefaults(config, "desmume");
+        }
+        else if (_citra.IsChecked == true)
+        {
+            config.EmulatorPath = FindEmulator("citra-qt.exe");
+            ApplyDefaults(config, "citra");
+        }
+        else if (_custom.IsChecked == true)
+        {
+            config.EmulatorPath = _pathBox.Text;
+        }
 
         if (string.IsNullOrEmpty(config.EmulatorPath) || !File.Exists(config.EmulatorPath))
         {
@@ -180,6 +195,70 @@ public class EmulatorSelectPage : Page, ISetupPage
             return false;
         }
         return true;
+    }
+
+    private static void ApplyDefaults(AppConfig config, string emulator)
+    {
+        if (emulator == "citra")
+        {
+            // Citra / Lime3DS defaults
+            config.ButtonMappings = new()
+            {
+                [0] = (int)'Z',      // A
+                [1] = (int)'X',      // B
+                [2] = (int)'S',      // X
+                [3] = (int)'A',      // Y
+                [4] = (int)'Q',      // L
+                [5] = (int)'W',      // R
+                [6] = 0x0D,          // Start -> Enter
+                [7] = 0x08,          // Select -> Backspace
+            };
+            config.DPadMappings = new()
+            {
+                [0] = 0x26,  // Up
+                [1] = 0x28,  // Down
+                [2] = 0x25,  // Left
+                [3] = 0x27,  // Right
+            };
+        }
+        else if (emulator == "desmume")
+        {
+            // DeSmuME defaults
+            config.ButtonMappings = new()
+            {
+                [0] = (int)'X',      // A
+                [1] = (int)'Z',      // B
+                [2] = (int)'S',      // X
+                [3] = (int)'A',      // Y
+                [4] = (int)'Q',      // L
+                [5] = (int)'W',      // R
+                [6] = 0x0D,          // Start -> Enter
+                [7] = 0x08,          // Select -> Backspace
+            };
+            config.DPadMappings = new()
+            {
+                [0] = 0x26, [1] = 0x28, [2] = 0x25, [3] = 0x27,
+            };
+        }
+        else  // melonDS
+        {
+            // MelonDS defaults
+            config.ButtonMappings = new()
+            {
+                [0] = (int)'Z',      // A
+                [1] = (int)'X',      // B
+                [2] = (int)'S',      // X
+                [3] = (int)'A',      // Y
+                [4] = (int)'Q',      // L
+                [5] = (int)'W',      // R
+                [6] = 0x0D,          // Start -> Enter
+                [7] = 0x08,          // Select -> Backspace
+            };
+            config.DPadMappings = new()
+            {
+                [0] = 0x26, [1] = 0x28, [2] = 0x25, [3] = 0x27,
+            };
+        }
     }
 
     private static string FindEmulator(string exeName)

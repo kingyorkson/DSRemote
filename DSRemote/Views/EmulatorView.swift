@@ -11,8 +11,8 @@ struct EmulatorView: View {
     @State private var showPowerAlert = false
 
     var body: some View {
-        VStack(spacing: 6) {
-            // Power + Disconnect bar
+        VStack(spacing: 4) {
+            // Top bar
             HStack {
                 Button(action: { showPowerAlert = true }) {
                     Image(systemName: "power")
@@ -22,30 +22,26 @@ struct EmulatorView: View {
                         .background(Color.red.opacity(0.15))
                         .clipShape(Circle())
                 }
-                    .alert("Quit Game?", isPresented: $showPowerAlert) {
-                        Button("Cancel", role: .cancel) {}
-                        Button("Quit", role: .destructive) {
-                            network.sendStopEmulation()
-                            onPowerOff()
-                        }
-                    } message: {
-                        Text("This will stop the emulator and return to game selection.")
+                .alert("Quit Game?", isPresented: $showPowerAlert) {
+                    Button("Cancel", role: .cancel) {}
+                    Button("Quit", role: .destructive) {
+                        network.sendStopEmulation()
+                        onPowerOff()
                     }
+                } message: {
+                    Text("This will stop the emulator and return to game selection.")
+                }
 
                 Spacer()
 
-                Text("DSRemote")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                Text("DSRemote").font(.caption).foregroundColor(.gray)
 
                 Spacer()
 
                 Button(action: onDisconnect) {
                     HStack(spacing: 3) {
-                        Image(systemName: "power")
-                            .font(.caption2)
-                        Text("Disconnect")
-                            .font(.caption2)
+                        Image(systemName: "power").font(.caption2)
+                        Text("Disconnect").font(.caption2)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -55,51 +51,46 @@ struct EmulatorView: View {
                 }
             }
             .padding(.horizontal, 8)
-            .padding(.top, 4)
+            .padding(.top, 2)
 
-            // Top screen
-            ScreenView(image: $topScreen, label: "Top Screen")
-                .frame(height: UIScreen.main.bounds.height * 0.32)
+            // Top screen (big)
+            ScreenView(image: $topScreen, label: "Top")
+                .frame(height: UIScreen.main.bounds.height * 0.38)
 
-            // Bottom screen
-            ScreenView(image: $bottomScreen, label: "Bottom Screen")
-                .frame(height: UIScreen.main.bounds.height * 0.22)
-                .overlay(
-                    TouchSurfaceView(action: { point in
-                        network.sendInput(.touchDown, args: [Float(point.x), Float(point.y)])
-                    })
-                )
+            // Bottom screen (medium)
+            ScreenView(image: $bottomScreen, label: "Bottom")
+                .frame(height: UIScreen.main.bounds.height * 0.26)
+                .overlay(TouchSurfaceView(
+                    onTouchDown: { pt in network.sendInput(.touchDown, args: [Float(pt.x), Float(pt.y)]) },
+                    onTouchMove: { pt in network.sendInput(.touchMove, args: [Float(pt.x), Float(pt.y)]) },
+                    onTouchUp: { network.sendInput(.touchUp, args: []) }
+                ))
 
-            // 3DS-style controls
-            VStack(spacing: 10) {
-                // L / R shoulder buttons
-                HStack(spacing: 20) {
-                    ShoulderLabel(label: "L", onPress: {
+            // Compact 3DS controls
+            VStack(spacing: 6) {
+                // L / R
+                HStack(spacing: 30) {
+                    ShoulderLabel(label: "L", color: settings.accentColor, onPress: {
                         network.sendInput(.buttonDown, args: [4])
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [4]) }
                     })
                     Spacer()
-                    ShoulderLabel(label: "R", onPress: {
+                    ShoulderLabel(label: "R", color: settings.accentColor, onPress: {
                         network.sendInput(.buttonDown, args: [5])
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [5]) }
                     })
                 }
                 .padding(.horizontal, 20)
 
-                // D-Pad (left) + ABXY (right)
                 HStack(alignment: .center, spacing: 0) {
-                    // D-Pad
                     DPadView { direction in
                         network.sendInput(.dPadPress, args: [Float(direction.rawValue)])
                     }
                     .frame(maxWidth: .infinity)
 
-                    Spacer()
-
-                    // ABXY diamond
-                    VStack(spacing: 6) {
+                    VStack(spacing: 4) {
                         CircleButton(label: "Y", color: .yellow, onPress: { network.sendInput(.buttonDown, args: [3]) }, onRelease: { network.sendInput(.buttonUp, args: [3]) })
-                        HStack(spacing: 16) {
+                        HStack(spacing: 10) {
                             CircleButton(label: "X", color: .blue, onPress: { network.sendInput(.buttonDown, args: [2]) }, onRelease: { network.sendInput(.buttonUp, args: [2]) })
                             CircleButton(label: "B", color: .red, onPress: { network.sendInput(.buttonDown, args: [1]) }, onRelease: { network.sendInput(.buttonUp, args: [1]) })
                         }
@@ -107,36 +98,33 @@ struct EmulatorView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 12)
 
-                // Joystick + Start/Select
                 HStack(alignment: .center, spacing: 0) {
                     JoystickView { x, y in
                         network.sendInput(.joystickMove, args: [x, y])
                     }
-                    .frame(width: 70, height: 70)
+                    .frame(width: 60, height: 60)
                     .frame(maxWidth: .infinity)
 
-                    Spacer()
-
-                    HStack(spacing: 20) {
+                    HStack(spacing: 16) {
                         Button("Select") {
-                            network.sendInput(.buttonDown, args: [6])
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [6]) }
+                            network.sendInput(.buttonDown, args: [7])
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [7]) }
                         }
                         .buttonStyle(ControlButtonStyle(color: settings.accentColor))
 
                         Button("Start") {
-                            network.sendInput(.buttonDown, args: [7])
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [7]) }
+                            network.sendInput(.buttonDown, args: [6])
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { network.sendInput(.buttonUp, args: [6]) }
                         }
                         .buttonStyle(ControlButtonStyle(color: settings.accentColor))
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 12)
             }
-            .padding(.bottom, 8)
+            .padding(.bottom, 4)
         }
         .background(Color(hex: "#1a1a2e"))
         .ignoresSafeArea(.keyboard)
@@ -156,26 +144,21 @@ struct ScreenView: View {
                     .aspectRatio(contentMode: .fit)
             } else {
                 VStack {
-                    Image(systemName: "rectangle.split.2x1")
-                        .font(.largeTitle)
-                        .foregroundColor(.gray)
-                    Text(label)
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    Image(systemName: "rectangle.split.2x1").font(.largeTitle).foregroundColor(.gray)
+                    Text(label).font(.caption).foregroundColor(.gray)
                 }
             }
         }
         .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(hex: "#0f3460"), lineWidth: 1)
-        )
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(hex: "#0f3460"), lineWidth: 1))
         .padding(.horizontal, 4)
     }
 }
 
 struct TouchSurfaceView: UIViewRepresentable {
-    let action: (CGPoint) -> Void
+    let onTouchDown: (CGPoint) -> Void
+    let onTouchMove: (CGPoint) -> Void
+    let onTouchUp: () -> Void
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
@@ -191,25 +174,41 @@ struct TouchSurfaceView: UIViewRepresentable {
     func updateUIView(_ uiView: UIView, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(action: action)
+        Coordinator(onTouchDown: onTouchDown, onTouchMove: onTouchMove, onTouchUp: onTouchUp)
     }
 
     class Coordinator: NSObject {
-        let action: (CGPoint) -> Void
-        init(action: @escaping (CGPoint) -> Void) { self.action = action }
+        let onTouchDown: (CGPoint) -> Void
+        let onTouchMove: (CGPoint) -> Void
+        let onTouchUp: () -> Void
+
+        init(onTouchDown: @escaping (CGPoint) -> Void, onTouchMove: @escaping (CGPoint) -> Void, onTouchUp: @escaping () -> Void) {
+            self.onTouchDown = onTouchDown
+            self.onTouchMove = onTouchMove
+            self.onTouchUp = onTouchUp
+        }
+
+        private func normalizedLocation(in view: UIView, from gesture: UIGestureRecognizer) -> CGPoint {
+            let point = gesture.location(in: view)
+            return CGPoint(x: point.x / view.bounds.width, y: point.y / view.bounds.height)
+        }
 
         @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
             guard let view = gesture.view else { return }
-            let point = gesture.location(in: view)
-            let normalized = CGPoint(x: point.x / view.bounds.width, y: point.y / view.bounds.height)
-            action(normalized)
+            let pt = normalizedLocation(in: view, from: gesture)
+            switch gesture.state {
+            case .began: onTouchDown(pt)
+            case .changed: onTouchMove(pt)
+            case .ended, .cancelled: onTouchUp()
+            default: break
+            }
         }
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let view = gesture.view else { return }
-            let point = gesture.location(in: view)
-            let normalized = CGPoint(x: point.x / view.bounds.width, y: point.y / view.bounds.height)
-            action(normalized)
+            let pt = normalizedLocation(in: view, from: gesture)
+            onTouchDown(pt)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self.onTouchUp() }
         }
     }
 }
@@ -221,14 +220,11 @@ struct ControlButtonStyle: ButtonStyle {
             .font(.caption2)
             .fontWeight(.bold)
             .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .background(configuration.isPressed ? color.opacity(0.8) : color.opacity(0.3))
             .foregroundColor(.white)
             .cornerRadius(6)
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(color, lineWidth: 1)
-            )
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(color, lineWidth: 1))
     }
 }
 
@@ -244,7 +240,7 @@ struct CircleButton: View {
                 .font(.title3)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
-                .frame(width: 46, height: 46)
+                .frame(width: 40, height: 40)
                 .background(color.opacity(0.3))
                 .clipShape(Circle())
                 .overlay(Circle().stroke(color, lineWidth: 2))
@@ -259,6 +255,7 @@ struct CircleButton: View {
 
 struct ShoulderLabel: View {
     let label: String
+    let color: Color
     let onPress: () -> Void
 
     var body: some View {
@@ -267,13 +264,10 @@ struct ShoulderLabel: View {
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
-                .frame(width: 60, height: 28)
-                .background(Color(hex: "#333333"))
+                .frame(width: 50, height: 24)
+                .background(color.opacity(0.3))
                 .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color(hex: "#555555"), lineWidth: 1)
-                )
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(color, lineWidth: 1))
         }
     }
 }
