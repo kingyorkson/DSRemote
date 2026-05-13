@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct EmulatorView: View {
     @EnvironmentObject private var network: NetworkService
@@ -239,8 +240,8 @@ struct ScreenView: View {
             if let img = image {
                 Image(uiImage: img)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
                     .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
             } else {
                 VStack {
                     Image(systemName: "rectangle.split.2x1").font(.largeTitle).foregroundColor(.gray)
