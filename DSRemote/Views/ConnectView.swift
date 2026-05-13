@@ -7,7 +7,7 @@ struct ConnectView: View {
     @State private var host = ""
     @State private var port = "9876"
     @State private var showSettings = false
-    @State private var showLayouts = false
+    @State private var showChangeStuff = false
     let onConnected: () -> Void
 
     private let repoURL = URL(string: "https://github.com/anomalyco/DSRemote/releases")!
@@ -143,7 +143,7 @@ struct ConnectView: View {
 
                     Spacer()
 
-                    Button(action: { showLayouts = true }) {
+                    Button(action: { showChangeStuff = true }) {
                         HStack(spacing: 4) {
                             Image(systemName: "slider.horizontal.3")
                                 .font(.caption)
@@ -169,8 +169,9 @@ struct ConnectView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
-        .fullScreenCover(isPresented: $showLayouts) {
-            LayoutSelectorView()
+        .sheet(isPresented: $showChangeStuff) {
+            ChangeStuffView()
+                .environmentObject(settings)
                 .environmentObject(layoutService)
         }
     }

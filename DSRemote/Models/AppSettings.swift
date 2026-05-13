@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum GameSelectLayout: String {
+    case `default` = "default"
+    case threeDS = "threeDS"
+}
+
 class AppSettings: ObservableObject {
     @Published var accentColor: Color {
         didSet {
@@ -19,12 +24,22 @@ class AppSettings: ObservableObject {
         }
     }
 
+    @Published var gameSelectLayout: GameSelectLayout = .default {
+        didSet {
+            UserDefaults.standard.set(gameSelectLayout.rawValue, forKey: "gameSelectLayout")
+        }
+    }
+
     init() {
         let savedHex = UserDefaults.standard.string(forKey: "accentColor") ?? "#32CD32"
         accentColor = Color(hex: savedHex)
         lastHost = UserDefaults.standard.string(forKey: "lastHost") ?? ""
         lastPort = UserDefaults.standard.integer(forKey: "lastPort")
         if lastPort == 0 { lastPort = 9876 }
+        if let raw = UserDefaults.standard.string(forKey: "gameSelectLayout"),
+           let val = GameSelectLayout(rawValue: raw) {
+            gameSelectLayout = val
+        }
     }
 }
 

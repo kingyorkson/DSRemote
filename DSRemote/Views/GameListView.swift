@@ -4,6 +4,7 @@ struct GameListView: View {
     @EnvironmentObject private var network: NetworkService
     @EnvironmentObject private var settings: AppSettings
     @State private var searchText = ""
+    @State private var showLayoutPicker = false
     let onLaunchGame: (GameRom) -> Void
     let onDisconnect: () -> Void
 
@@ -18,11 +19,20 @@ struct GameListView: View {
 
             if network.games.isEmpty {
                 emptyState
+            } else if settings.gameSelectLayout == .threeDS {
+                ThreeDSGameListView(games: filteredGames, onLaunchGame: onLaunchGame)
             } else {
                 gameList
             }
         }
         .background(Color(hex: "#1a1a2e"))
+        .confirmationDialog("Game Select Layout", isPresented: $showLayoutPicker, titleVisibility: .visible) {
+            Button("Default (Grid)") { settings.gameSelectLayout = .default }
+            Button("3DS Style (Gyro)") { settings.gameSelectLayout = .threeDS }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Choose how your game library is displayed.")
+        }
     }
 
     private var header: some View {
@@ -49,9 +59,15 @@ struct GameListView: View {
 
             Spacer()
 
-            Circle()
-                .fill(Color.green)
-                .frame(width: 8, height: 8)
+            Menu {
+                Button(action: { showLayoutPicker = true }) {
+                    Label("Layouts", systemImage: "square.grid.2x2")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title3)
+                    .foregroundColor(settings.accentColor)
+            }
         }
         .padding()
         .background(Color(hex: "#16213e"))
