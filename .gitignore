@@ -1,0 +1,18 @@
+# .NET build
+DSRemote/bin/
+DSRemote/obj/
+*.dll
+*.exe
+*.pdb
+
+# macOS
+.DS_Store
+
+# Xcode
+*.xcworkspace/
+*.xcuserdata/
+
+# Build artifacts
+*.ipa
+*.xcarchive
+build/
