@@ -25,8 +25,8 @@ struct EmulatorView: View {
                 }
             }
         }
-        .background(Color(hex: "#1a1a2e"))
-        .background(settings.accentColor.opacity(0.15))
+        .background(Color.black.opacity(0.5))
+        .background(settings.accentColor.opacity(0.5))
         .ignoresSafeArea(.keyboard)
     }
 
