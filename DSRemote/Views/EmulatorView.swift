@@ -116,6 +116,7 @@ struct EmulatorView: View {
     }
 
     // MARK: - Landscape
+    @ViewBuilder
     private func landscapeBody(geo: GeometryProxy) -> some View {
         if settings.usePcAsTopScreen {
             // PC top screen mode: only bottom screen + controls
