@@ -30,6 +30,8 @@ public class NetworkService : IDisposable
 
     public Task StartServer()
     {
+        _listener?.Stop();
+        _cts?.Cancel();
         _cts = new CancellationTokenSource();
         _listener = new TcpListener(IPAddress.Any, _port);
         _listener.Start();

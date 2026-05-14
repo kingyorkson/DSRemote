@@ -58,6 +58,17 @@ public class MainViewModel : INotifyPropertyChanged
         set { _phoneScreenImage = value; OnPropertyChanged(); }
     }
 
+    private bool _isKidModeActive;
+    public bool IsKidModeActive
+    {
+        get => _isKidModeActive;
+        set
+        {
+            _isKidModeActive = value;
+            OnPropertyChanged();
+        }
+    }
+
     private bool _usePcAsTopScreen;
     public bool UsePcAsTopScreen
     {
@@ -164,10 +175,10 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async void RefreshGames()
     {
-        Games.Clear();
-        var found = _library.ScanFolders(_config.Current.GameFolders);
+        var found = await Task.Run(() => _library.ScanFolders(_config.Current.GameFolders));
         await App.Current.Dispatcher.InvokeAsync(() =>
         {
+            Games.Clear();
             foreach (var game in found)
                 Games.Add(game);
         });

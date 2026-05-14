@@ -30,23 +30,32 @@ public partial class MainWindow : Window
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        if (!_vm.IsSetupComplete)
+        try
         {
-            var wizard = new SetupWizard();
-            if (wizard.ShowDialog() == true && wizard.Result != null)
+            if (!_vm.IsSetupComplete)
             {
-                _vm.CompleteSetup(wizard.Result);
+                var wizard = new SetupWizard();
+                if (wizard.ShowDialog() == true && wizard.Result != null)
+                {
+                    _vm.CompleteSetup(wizard.Result);
+                }
+                else
+                {
+                    Close();
+                    return;
+                }
             }
-            else
-            {
-                Close();
-                return;
-            }
-        }
 
-        StartSlideMenuWatcher();
-        StartCaptureLoop();
-        UpdatePcTopScreenButton();
+            StartSlideMenuWatcher();
+            StartCaptureLoop();
+            UpdatePcTopScreenButton();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error during setup: {ex.Message}\n\n{ex.StackTrace}",
+                "Setup Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            Close();
+        }
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -265,10 +274,31 @@ public partial class MainWindow : Window
         _slideMenuVisible = true;
     }
 
+    private KidsModeWindow? _kidsModeWindow;
+
+    private void KidsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_kidsModeWindow != null)
+        {
+            _kidsModeWindow.Focus();
+            return;
+        }
+
+        _kidsModeWindow = new KidsModeWindow();
+        _kidsModeWindow.Closed += (_, _) =>
+        {
+            if (_kidsModeWindow?.IsKidModeActive == true)
+                _vm.IsKidModeActive = true;
+            _kidsModeWindow = null;
+        };
+        _kidsModeWindow.Show();
+    }
+
     private void Window_Closing(object sender, CancelEventArgs e)
     {
         _slideTimer?.Stop();
         _captureTimer?.Stop();
         CloseTopScreenWindow();
+        _kidsModeWindow?.Close();
     }
 }

@@ -42,7 +42,8 @@ public class EmulatorService
         {
             FileName = emuPath,
             Arguments = $"\"{game.FullPath}\"",
-            UseShellExecute = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
             WorkingDirectory = Path.GetDirectoryName(emuPath)
         };
 
@@ -55,17 +56,12 @@ public class EmulatorService
                 return false;
             }
 
-            // Wait for window to appear, then minimize it
-            _currentProcess.WaitForInputIdle(5000);
-            _currentProcess.Refresh();
-
-            // Try to hide/minimize the emulator window
-            for (int i = 0; i < 10; i++)
+            // Wait for main window to appear, then minimize it
+            for (int i = 0; i < 20; i++)
             {
                 _currentProcess.Refresh();
                 if (_currentProcess.MainWindowHandle != IntPtr.Zero)
                 {
-                    // Send to back and minimize
                     SetWindowPos(_currentProcess.MainWindowHandle, HWND_BOTTOM, 0, 0, 0, 0,
                         SWP_NOSIZE | SWP_NOACTIVATE);
                     ShowWindowAsync(_currentProcess.MainWindowHandle, SW_MINIMIZE);

@@ -14,26 +14,27 @@ public class AppConfig
     {
         get
         {
-            var appData = Path.Combine(
+            var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "DSRemote", "emulators", "azahar");
+                "DSRemote", "emulators");
 
-            // Check app-local bundled copy first
-            var localDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "EmulatorFiles", "azahar");
-            if (Directory.Exists(localDir))
+            // Check directories in priority order
+            string[] searchDirs =
             {
-                // Copy to AppData if not there
-                if (!Directory.Exists(appData))
-                    CopyFiles(localDir, appData);
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "EmulatorFiles", "azahar"),
+                Path.Combine(baseDir, "azahar"),
+                Path.Combine(baseDir, "lime3ds"), // fallback to old Lime3DS directory
+            };
 
-                var exe = FindAzaharExe(localDir);
-                if (exe != null) return exe;
-            }
-
-            // Fallback to AppData
-            if (Directory.Exists(appData))
+            foreach (var dir in searchDirs)
             {
-                var exe = FindAzaharExe(appData);
+                if (!Directory.Exists(dir)) continue;
+
+                // Copy bundled files to AppData on first run
+                if (dir == searchDirs[0] && !Directory.Exists(searchDirs[1]))
+                    CopyFiles(dir, searchDirs[1]);
+
+                var exe = FindAzaharExe(dir);
                 if (exe != null) return exe;
             }
 
@@ -43,13 +44,24 @@ public class AppConfig
 
     private static string? FindAzaharExe(string dir)
     {
-        // Prefer azahar.exe, then any non-CLI exe
-        var preferred = Path.Combine(dir, "azahar.exe");
-        if (File.Exists(preferred)) return preferred;
+        // Prefer azahar.exe in any subdirectory
+        var allExes = Directory.GetFiles(dir, "*.exe", SearchOption.AllDirectories);
 
-        return Directory.GetFiles(dir, "*.exe", SearchOption.AllDirectories)
-            .FirstOrDefault(f => !Path.GetFileNameWithoutExtension(f)
-                .Contains("cli", StringComparison.OrdinalIgnoreCase));
+        var preferred = allExes.FirstOrDefault(f =>
+            Path.GetFileName(f).Equals("azahar.exe", StringComparison.OrdinalIgnoreCase));
+        if (preferred != null) return preferred;
+
+        // Then try any non-CLI exe (prefer GUI names)
+        foreach (var name in new[] { "azahar-qt.exe", "lime3ds-qt.exe", "lime3ds.exe", "citra-qt.exe" })
+        {
+            var match = allExes.FirstOrDefault(f =>
+                Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (match != null) return match;
+        }
+
+        // Last resort: any exe without "cli" in the name
+        return allExes.FirstOrDefault(f => !Path.GetFileNameWithoutExtension(f)
+            .Contains("cli", StringComparison.OrdinalIgnoreCase));
     }
 
     private static void CopyFiles(string source, string dest)

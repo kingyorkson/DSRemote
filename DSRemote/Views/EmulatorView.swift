@@ -11,6 +11,8 @@ struct EmulatorView: View {
     let onDisconnect: () -> Void
 
     @State private var showPowerAlert = false
+    @State private var showTVSheet = false
+    @StateObject private var tvManager = TVDisplayManager()
 
     var body: some View {
         GeometryReader { geo in
@@ -41,6 +43,12 @@ struct EmulatorView: View {
         .background(Color.black.opacity(0.5))
         .background(settings.accentColor.opacity(0.5))
         .ignoresSafeArea(.keyboard)
+        .onChange(of: topScreen) { _, newValue in
+            tvManager.updateTopImage(newValue)
+        }
+        .onChange(of: bottomScreen) { _, newValue in
+            tvManager.updateBottomImage(newValue)
+        }
     }
 
     // MARK: - Top Bar
@@ -62,6 +70,19 @@ struct EmulatorView: View {
                 }
             } message: {
                 Text("This will stop the emulator and return to game selection.")
+            }
+
+            // TV mode button
+            Button(action: { showTVSheet = true }) {
+                Image(systemName: tvManager.isTVActive ? "tv.fill" : "tv")
+                    .font(.caption)
+                    .foregroundColor(tvManager.isTVActive ? settings.accentColor : .gray)
+                    .padding(6)
+                    .background((tvManager.isTVActive ? settings.accentColor : Color.gray).opacity(0.15))
+                    .clipShape(Circle())
+            }
+            .sheet(isPresented: $showTVSheet) {
+                TVConnectView(tvManager: tvManager)
             }
 
             Text(network.connectionType.rawValue)
@@ -337,6 +358,64 @@ struct TouchSurfaceView: UIViewRepresentable {
             let pt = normalizedLocation(in: view, from: gesture)
             onTouchDown(pt)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self.onTouchUp() }
+        }
+    }
+}
+
+// MARK: - TV Connect View
+struct TVConnectView: View {
+    @ObservedObject var tvManager: TVDisplayManager
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color(hex: "#1a1a2e").ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                Spacer()
+
+                Image(systemName: tvManager.isTVActive ? "tv.fill" : "tv")
+                    .font(.system(size: 60))
+                    .foregroundColor(tvManager.isTVActive ? .green : .gray)
+
+                Text(tvManager.isTVActive ? "Connected to TV" : "Connect to Apple TV")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+
+                if tvManager.isTVActive {
+                    Text("Game screens are now streaming to your TV.")
+                        .font(.body)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                } else {
+                    Text("Open Control Center, tap Screen Mirroring,\nand select your Apple TV.\n\nOr use the button below:")
+                        .font(.body)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+
+                if !tvManager.isTVActive {
+                    AVRoutePickerViewRepresentable()
+                        .frame(width: 44, height: 44)
+                }
+
+                Spacer()
+
+                Button(action: { dismiss() }) {
+                    Text("Done")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(tvManager.isTVActive ? Color.green : Color(hex: "#0f3460"))
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 30)
+                .padding(.bottom, 40)
+            }
         }
     }
 }
