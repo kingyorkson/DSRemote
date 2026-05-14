@@ -51,7 +51,7 @@ struct ThreeDSGameListView: View {
                     }
                 }
                 .overlay(
-                    Text(games[currentIndex].platform == "ThreeDS" ? "3DS" : "DS")
+                    Text("3DS")
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(settings.accentColor)

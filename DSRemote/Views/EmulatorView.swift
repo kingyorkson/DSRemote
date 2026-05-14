@@ -84,11 +84,14 @@ struct EmulatorView: View {
 
             // 3-dot menu with Use PC as Top Screen toggle
             Menu {
-                Toggle(isOn: $settings.usePcAsTopScreen) {
-                    Label("Use PC as Top Screen", systemImage: "display")
-                }
-                .onChange(of: settings.usePcAsTopScreen) { _, newValue in
-                    network.sendUsePcAsTopScreen(newValue)
+                Button {
+                    settings.usePcAsTopScreen.toggle()
+                    network.sendUsePcAsTopScreen(settings.usePcAsTopScreen)
+                } label: {
+                    Label(
+                        settings.usePcAsTopScreen ? "✓ PC as Top Screen" : "Use PC as Top Screen",
+                        systemImage: "display"
+                    )
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
