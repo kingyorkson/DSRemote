@@ -16,12 +16,25 @@ struct EmulatorView: View {
         GeometryReader { geo in
             let isLandscape = geo.size.width > geo.size.height
 
-            VStack(spacing: 0) {
-                topBar
-                if isLandscape {
+            if isLandscape {
+                VStack(spacing: 0) {
+                    topBar
                     landscapeBody(geo: geo)
-                } else {
-                    portraitBody(geo: geo)
+                }
+            } else {
+                VStack(spacing: 0) {
+                    topBar
+                    Spacer()
+                    VStack(spacing: 16) {
+                        Image(systemName: "rotate.right")
+                            .font(.system(size: 60))
+                            .foregroundColor(settings.accentColor)
+                        Text("Please rotate\nyour device to landscape")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    Spacer()
                 }
             }
         }
@@ -63,11 +76,25 @@ struct EmulatorView: View {
 
             Spacer()
 
-            Text(network.emulatorName)
+            Text("3DS")
                 .font(.caption)
                 .foregroundColor(.gray)
 
             Spacer()
+
+            // 3-dot menu with Use PC as Top Screen toggle
+            Menu {
+                Toggle(isOn: $settings.usePcAsTopScreen) {
+                    Label("Use PC as Top Screen", systemImage: "display")
+                }
+                .onChange(of: settings.usePcAsTopScreen) { _, newValue in
+                    network.sendUsePcAsTopScreen(newValue)
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title3)
+                    .foregroundColor(settings.accentColor)
+            }
 
             Button(action: onDisconnect) {
                 HStack(spacing: 3) {
@@ -85,59 +112,52 @@ struct EmulatorView: View {
         .padding(.vertical, 4)
     }
 
-    // MARK: - Portrait
-    private func portraitBody(geo: GeometryProxy) -> some View {
-        VStack(spacing: 4) {
-            ScreenView(image: $topScreen, label: "Top")
-                .frame(height: geo.size.height * 0.42)
-
-            ScreenView(image: $bottomScreen, label: "Bottom")
-                .frame(height: geo.size.height * 0.30)
-                .overlay(TouchSurfaceView(
-                    onTouchDown: { pt in network.sendInput(.touchDown, args: [Float(pt.x), Float(pt.y)]) },
-                    onTouchMove: { pt in network.sendInput(.touchMove, args: [Float(pt.x), Float(pt.y)]) },
-                    onTouchUp: { network.sendInput(.touchUp, args: []) }
-                ))
-
-            controlZone(containerSize: geo.size)
-        }
-    }
-
     // MARK: - Landscape
     private func landscapeBody(geo: GeometryProxy) -> some View {
-        HStack(spacing: 0) {
-            leftControls(containerSize: geo.size)
-                .frame(width: geo.size.width * 0.22)
+        if settings.usePcAsTopScreen {
+            // PC top screen mode: only bottom screen + controls
+            HStack(spacing: 0) {
+                leftControls(containerSize: geo.size)
+                    .frame(width: geo.size.width * 0.22)
 
-            VStack(spacing: 2) {
-                ScreenView(image: $topScreen, label: "Top")
-                    .frame(height: geo.size.height * 0.40)
-                ScreenView(image: $bottomScreen, label: "Bottom")
-                    .frame(height: geo.size.height * 0.28)
-                    .overlay(TouchSurfaceView(
-                        onTouchDown: { pt in network.sendInput(.touchDown, args: [Float(pt.x), Float(pt.y)]) },
-                        onTouchMove: { pt in network.sendInput(.touchMove, args: [Float(pt.x), Float(pt.y)]) },
-                        onTouchUp: { network.sendInput(.touchUp, args: []) }
-                    ))
-            }
-            .frame(width: geo.size.width * 0.56)
-
-            rightControls(containerSize: geo.size)
-                .frame(width: geo.size.width * 0.22)
-        }
-    }
-
-    // MARK: - Controls (Portrait)
-    private func controlZone(containerSize: CGSize) -> some View {
-        GeometryReader { geo in
-            ZStack {
-                ForEach(layoutService.activeLayout.buttons) { btn in
-                    controlButton(btn, containerSize: geo.size)
+                VStack(spacing: 2) {
+                    // Bottom screen only, with touch
+                    ScreenView(image: $bottomScreen, label: "Bottom")
+                        .frame(height: geo.size.height * 0.40)
+                        .overlay(TouchSurfaceView(
+                            onTouchDown: { pt in network.sendInput(.touchDown, args: [Float(pt.x), Float(pt.y)]) },
+                            onTouchMove: { pt in network.sendInput(.touchMove, args: [Float(pt.x), Float(pt.y)]) },
+                            onTouchUp: { network.sendInput(.touchUp, args: []) }
+                        ))
                 }
+                .frame(width: geo.size.width * 0.56)
+
+                rightControls(containerSize: geo.size)
+                    .frame(width: geo.size.width * 0.22)
+            }
+        } else {
+            // Default: both screens + controls
+            HStack(spacing: 0) {
+                leftControls(containerSize: geo.size)
+                    .frame(width: geo.size.width * 0.22)
+
+                VStack(spacing: 2) {
+                    ScreenView(image: $topScreen, label: "Top")
+                        .frame(height: geo.size.height * 0.40)
+                    ScreenView(image: $bottomScreen, label: "Bottom")
+                        .frame(height: geo.size.height * 0.28)
+                        .overlay(TouchSurfaceView(
+                            onTouchDown: { pt in network.sendInput(.touchDown, args: [Float(pt.x), Float(pt.y)]) },
+                            onTouchMove: { pt in network.sendInput(.touchMove, args: [Float(pt.x), Float(pt.y)]) },
+                            onTouchUp: { network.sendInput(.touchUp, args: []) }
+                        ))
+                }
+                .frame(width: geo.size.width * 0.56)
+
+                rightControls(containerSize: geo.size)
+                    .frame(width: geo.size.width * 0.22)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.bottom, 4)
     }
 
     // MARK: - Controls (Landscape)

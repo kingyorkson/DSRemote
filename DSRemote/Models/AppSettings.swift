@@ -30,6 +30,12 @@ class AppSettings: ObservableObject {
         }
     }
 
+    @Published var usePcAsTopScreen: Bool = false {
+        didSet {
+            UserDefaults.standard.set(usePcAsTopScreen, forKey: "usePcAsTopScreen")
+        }
+    }
+
     init() {
         let savedHex = UserDefaults.standard.string(forKey: "accentColor") ?? "#32CD32"
         accentColor = Color(hex: savedHex)
@@ -40,6 +46,7 @@ class AppSettings: ObservableObject {
            let val = GameSelectLayout(rawValue: raw) {
             gameSelectLayout = val
         }
+        usePcAsTopScreen = UserDefaults.standard.bool(forKey: "usePcAsTopScreen")
     }
 }
 

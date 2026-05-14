@@ -7,9 +7,13 @@ C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\bin\Debug\net8.0-windows\Hardc
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\bin\Debug\net8.0-windows\System.Drawing.Common.dll
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\DSRemote.csproj.AssemblyReference.cache
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\MainWindow.baml
+C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\InputMappingDialog.baml
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\SetupWizard.baml
+C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\TopScreenWindow.baml
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\MainWindow.g.cs
+C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\InputMappingDialog.g.cs
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\SetupWizard.g.cs
+C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\TopScreenWindow.g.cs
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\App.g.cs
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\DSRemote_MarkupCompile.cache
@@ -27,5 +31,3 @@ C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\refin
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\DSRemote.pdb
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\DSRemote.genruntimeconfig.cache
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\ref\DSRemote.dll
-C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\InputMappingDialog.baml
-C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\obj\Debug\net8.0-windows\Views\InputMappingDialog.g.cs

@@ -133,9 +133,9 @@ struct GameRow: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(game.platform == "ThreeDS" ? Color.orange : Color.blue)
+                    .fill(Color.orange)
                     .frame(width: 44, height: 44)
-                Text(game.platform == "ThreeDS" ? "3" : "D")
+                Text("3")
                     .font(.headline)
                     .foregroundColor(.white)
             }

@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET8_0;NETCOREAPP
 C:\Users\kingy\OneDrive\Documents\3DS DS\DSRemote\App.xaml
-375965873
+4-385238197
 
-20991522273
+201562094481
 2081909536636
-MainWindow.xaml;Views\InputMappingDialog.xaml;Views\SetupWizard.xaml;
+MainWindow.xaml;Views\InputMappingDialog.xaml;Views\SetupWizard.xaml;Views\TopScreenWindow.xaml;
 
 False
 

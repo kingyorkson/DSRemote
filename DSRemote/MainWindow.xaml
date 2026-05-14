@@ -172,9 +172,9 @@
                                         </Grid.ColumnDefinitions>
                                         <Border Grid.Column="0" Width="36" Height="36"
                                                 CornerRadius="6" Margin="0 0 10 0"
-                                                Background="{Binding Platform, Converter={StaticResource PlatformToColor}}"
+                                                Background="#FF9800"
                                                 VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Platform, Converter={StaticResource PlatformToInitial}}"
+                                            <TextBlock Text="3"
                                                        Foreground="White" FontWeight="Bold"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
@@ -239,6 +239,9 @@
                 <Button Content="Disconnect" Padding="10" Margin="0 0 0 10"
                         Background="#e94560" Foreground="White" BorderThickness="0"
                         Click="Disconnect_Click"/>
+                <Button x:Name="PcTopScreenBtn" Content="Use PC as Top Screen" Padding="10" Margin="0 0 0 10"
+                        Background="#16213e" Foreground="White" BorderThickness="0"
+                        Click="PcTopScreen_Click"/>
                 <Button Content="Input Bindings" Padding="10" Margin="0 0 0 10"
                         Background="#16213e" Foreground="White" BorderThickness="0"
                         Click="InputBindings_Click"/>

@@ -58,6 +58,19 @@ public class MainViewModel : INotifyPropertyChanged
         set { _phoneScreenImage = value; OnPropertyChanged(); }
     }
 
+    private bool _usePcAsTopScreen;
+    public bool UsePcAsTopScreen
+    {
+        get => _usePcAsTopScreen;
+        set
+        {
+            _usePcAsTopScreen = value;
+            _config.Current.UsePcAsTopScreen = value;
+            _config.Save();
+            OnPropertyChanged();
+        }
+    }
+
     public string LocalIPAddress => GetLocalIP();
     public int Port => 9876;
 
@@ -117,7 +130,8 @@ public class MainViewModel : INotifyPropertyChanged
         _input.SetCaptureService(_capture);
 
         AccentColor = (Color)ColorConverter.ConvertFromString(_config.Current.AccentColor);
-        _network.EmulatorName = PlatformName(_config.Current.EmulatorType);
+        _network.EmulatorName = "3DS";
+        _usePcAsTopScreen = _config.Current.UsePcAsTopScreen;
 
         IsSetupComplete = _config.Current.SetupComplete;
 
@@ -141,7 +155,8 @@ public class MainViewModel : INotifyPropertyChanged
         _input.LoadConfig(config);
         IsSetupComplete = true;
         AccentColor = (Color)ColorConverter.ConvertFromString(config.AccentColor);
-        _network.EmulatorName = PlatformName(config.EmulatorType);
+        _network.EmulatorName = "3DS";
+        _usePcAsTopScreen = config.UsePcAsTopScreen;
         _ = Task.Run(RefreshGames);
         _ = _network.StartServer();
         _discovery.Start();
@@ -198,6 +213,13 @@ public class MainViewModel : INotifyPropertyChanged
             await _network.SendMessage(bottom);
     }
 
+    public (string Top, string Bottom) CaptureScreens()
+    {
+        var hWnd = GetEmulatorWindowHandle();
+        if (hWnd == null || hWnd.Value == IntPtr.Zero) return ("", "");
+        return _capture.CaptureScreensAsBase64(hWnd.Value);
+    }
+
     private async void OnDeviceConnected(ConnectionInfo info)
     {
         await App.Current.Dispatcher.Invoke(async () =>
@@ -227,7 +249,6 @@ public class MainViewModel : INotifyPropertyChanged
             using var doc = System.Text.Json.JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            // Input messages use "type" field
             if (root.TryGetProperty("type", out var typeProp))
             {
                 var type = typeProp.GetString();
@@ -268,7 +289,6 @@ public class MainViewModel : INotifyPropertyChanged
                 return;
             }
 
-            // Action messages use "action" field
             var action = root.TryGetProperty("action", out var actionProp) ? actionProp.GetString() : null;
             switch (action)
             {
@@ -300,6 +320,10 @@ public class MainViewModel : INotifyPropertyChanged
                             });
                         }
                     }
+                    break;
+                case "usePcAsTopScreen":
+                    if (root.TryGetProperty("value", out var val))
+                        UsePcAsTopScreen = val.GetBoolean();
                     break;
                 case "stop":
                     App.Current.Dispatcher.Invoke(StopEmulation);
@@ -337,13 +361,6 @@ public class MainViewModel : INotifyPropertyChanged
             };
         });
     }
-
-    private static string PlatformName(EmulatorType type) => type switch
-    {
-        EmulatorType.DS => "DS",
-        EmulatorType.ThreeDS => "3DS",
-        _ => "DS"
-    };
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)

@@ -5,8 +5,7 @@ namespace DSRemote.Services;
 
 public class GameLibraryService
 {
-    private static readonly string[] DSExtensions = { ".nds", ".dsi", ".gba" };
-    private static readonly string[] ThreeDSExtensions = { ".3ds", ".cci", ".cxi", ".cia", ".3dsx" };
+    private static readonly string[] Extensions = { ".3ds", ".cci", ".cxi", ".cia", ".3dsx" };
 
     public List<GameRom> ScanFolders(IEnumerable<string> folders)
     {
@@ -24,17 +23,14 @@ public class GameLibraryService
         var games = new List<GameRom>();
         try
         {
-            var allExts = DSExtensions.Concat(ThreeDSExtensions).ToArray();
-            foreach (var ext in allExts)
+            foreach (var ext in Extensions)
             {
                 foreach (var file in Directory.EnumerateFiles(folder, $"*{ext}", SearchOption.AllDirectories))
                 {
-                    var is3DS = ThreeDSExtensions.Contains(Path.GetExtension(file).ToLower());
                     games.Add(new GameRom
                     {
                         Name = Path.GetFileNameWithoutExtension(file),
                         FullPath = file,
-                        Platform = is3DS ? EmulatorType.ThreeDS : EmulatorType.DS,
                         SizeBytes = new FileInfo(file).Length
                     });
                 }

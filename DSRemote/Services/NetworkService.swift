@@ -14,7 +14,7 @@ class NetworkService: ObservableObject {
     @Published var games: [GameRom] = []
     @Published var discoveredHosts: [String] = []
     @Published var connectionType: ConnectionType = .wifi
-    @Published var emulatorName: String = "Citra"
+    @Published var emulatorName: String = "3DS"
 
     private var connection: NWConnection?
     private var host: NWEndpoint.Host = "127.0.0.1"
@@ -204,13 +204,8 @@ class NetworkService: ObservableObject {
         for g in gamesData {
             guard let name = (g["name"] as? String) ?? (g["Name"] as? String),
                   let path = (g["fullPath"] as? String) ?? (g["FullPath"] as? String) else { continue }
-            let platform: String = {
-                if let s = g["platform"] as? String ?? g["Platform"] as? String { return s }
-                if let n = g["platform"] as? Int ?? g["Platform"] as? Int { return n == 0 ? "DS" : "ThreeDS" }
-                return ""
-            }()
             let size = (g["sizeFormatted"] as? String ?? g["SizeFormatted"] as? String) ?? ""
-            parsed.append(GameRom(name: name, fullPath: path, platform: platform, sizeFormatted: size))
+            parsed.append(GameRom(name: name, fullPath: path, sizeFormatted: size))
         }
         games = parsed
     }
@@ -235,6 +230,12 @@ class NetworkService: ObservableObject {
 
     func sendStopEmulation() {
         let msg = ["action": "stop"]
+        guard let data = try? JSONSerialization.data(withJSONObject: msg) else { return }
+        send(data)
+    }
+
+    func sendUsePcAsTopScreen(_ value: Bool) {
+        let msg: [String: Any] = ["action": "usePcAsTopScreen", "value": value]
         guard let data = try? JSONSerialization.data(withJSONObject: msg) else { return }
         send(data)
     }

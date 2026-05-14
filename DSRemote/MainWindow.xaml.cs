@@ -16,6 +16,8 @@ public partial class MainWindow : Window
     private DispatcherTimer? _slideTimer;
     private DispatcherTimer? _captureTimer;
     private bool _slideMenuVisible;
+    private TopScreenWindow? _topScreenWindow;
+    private byte[]? _lastTopScreenData;
 
     public MainWindow()
     {
@@ -44,6 +46,7 @@ public partial class MainWindow : Window
 
         StartSlideMenuWatcher();
         StartCaptureLoop();
+        UpdatePcTopScreenButton();
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -126,6 +129,18 @@ public partial class MainWindow : Window
             if (hWnd.HasValue)
             {
                 await _vm.SendScreenshot(hWnd.Value);
+
+                // Update top screen window if open
+                if (_topScreenWindow != null)
+                {
+                    var (top, _) = _vm.CaptureScreens();
+                    if (!string.IsNullOrEmpty(top))
+                    {
+                        var base64 = top.Replace("TOP_IMAGE:", "");
+                        _lastTopScreenData = Convert.FromBase64String(base64);
+                        _topScreenWindow.UpdateImage(_lastTopScreenData);
+                    }
+                }
             }
         };
         _captureTimer.Start();
@@ -142,11 +157,59 @@ public partial class MainWindow : Window
     private void Disconnect_Click(object sender, RoutedEventArgs e)
     {
         _vm.DisconnectDevice();
+        CloseTopScreenWindow();
     }
 
     private void StopEmulation_Click(object sender, RoutedEventArgs e)
     {
         _vm.StopEmulation();
+    }
+
+    private void PcTopScreen_Click(object sender, RoutedEventArgs e)
+    {
+        _vm.UsePcAsTopScreen = !_vm.UsePcAsTopScreen;
+
+        if (_vm.UsePcAsTopScreen)
+        {
+            _topScreenWindow = new TopScreenWindow();
+            _topScreenWindow.Closed += (_, _) =>
+            {
+                _topScreenWindow = null;
+                _vm.UsePcAsTopScreen = false;
+                UpdatePcTopScreenButton();
+            };
+            _topScreenWindow.Show();
+
+            // Send state to phone
+            _ = _vm.Config.UsePcAsTopScreen
+                ? _vm.SendScreenshot(IntPtr.Zero) // just to trigger network
+                : Task.CompletedTask;
+        }
+        else
+        {
+            CloseTopScreenWindow();
+        }
+
+        UpdatePcTopScreenButton();
+    }
+
+    private void CloseTopScreenWindow()
+    {
+        if (_topScreenWindow != null)
+        {
+            _topScreenWindow.Close();
+            _topScreenWindow = null;
+        }
+    }
+
+    private void UpdatePcTopScreenButton()
+    {
+        PcTopScreenBtn.Content = _vm.UsePcAsTopScreen
+            ? "✓ Use PC as Top Screen"
+            : "Use PC as Top Screen";
+        PcTopScreenBtn.Background = _vm.UsePcAsTopScreen
+            ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#32CD32"))
+            : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#16213e"));
     }
 
     private void InputBindings_Click(object sender, RoutedEventArgs e)
@@ -206,5 +269,6 @@ public partial class MainWindow : Window
     {
         _slideTimer?.Stop();
         _captureTimer?.Stop();
+        CloseTopScreenWindow();
     }
 }
