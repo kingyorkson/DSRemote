@@ -1,7 +1,7 @@
 import UIKit
 
 @MainActor
-class TVDisplayManager: ObservableObject {
+class TVDisplayManager: NSObject, ObservableObject {
     @Published var isTVActive = false
 
     private var externalWindow: UIWindow?
